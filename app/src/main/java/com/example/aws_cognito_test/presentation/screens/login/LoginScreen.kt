@@ -65,7 +65,10 @@ fun MainContent(
     uiState: LoginViewModelStateEvents.UiState,
     onEvent: (LoginViewModelStateEvents.Event) -> Unit
 ) {
-    Box(modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center 
+    ) {
         Authenticator { state ->
             if (state.user.username.isNotEmpty()) {
                 onEvent(LoginViewModelStateEvents.Event.FetchAttributes)
