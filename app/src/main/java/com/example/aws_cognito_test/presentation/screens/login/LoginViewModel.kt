@@ -1,9 +1,9 @@
 package com.example.aws_cognito_test.presentation.screens.login
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.amplifyframework.core.Amplify
-import com.amplifyframework.ui.authenticator.AuthenticatorStepState
-import com.amplifyframework.ui.authenticator.LoadingState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 class LoginViewModel : ViewModel() {
     private val _navigation = Channel<LoginViewModelStateEvents.Navigation>()
@@ -21,31 +23,43 @@ class LoginViewModel : ViewModel() {
 
     fun onEvent(event: LoginViewModelStateEvents.Event) {
         when (event) {
-            LoginViewModelStateEvents.Event.SignIn -> { fetchUserAttributes() }
+            LoginViewModelStateEvents.Event.FetchAttributes -> { fetchUserAttributes() }
             LoginViewModelStateEvents.Event.SignOut -> { signOut() }
-            LoginViewModelStateEvents.Event.GoToEmitScreen -> {}
+            LoginViewModelStateEvents.Event.GoToEmitScreen -> { goToEmitScreen() }
         }
     }
 
     private fun fetchUserAttributes() {
-        Amplify.Auth.fetchUserAttributes(
-            { attributes ->
-                _state.update { currentState ->
-                    currentState.copy(
-                        success = attributes.firstOrNull {
-                            it.key.keyString == "name"
-                        }?.value.toString()
-                    )
+        viewModelScope.launch {
+            Amplify.Auth.fetchUserAttributes(
+                { attributes ->
+                    _state.update { currentState ->
+                        currentState.copy(
+                            success = attributes.firstOrNull {
+                                it.key.keyString == "name"
+                            }?.value.toString()
+                        )
+                    }
+                    goToEmitScreen()
+                    Log.d("Authentication", "Successfully logged in: ${_state.value}")
+                },
+                { error ->
+                    _state.update { currentState ->
+                        currentState.copy(
+                            error = error.message
+                        )
+                    }
+                    Log.w("Authentication", "Failed to login: ${error.message}")
                 }
-            },
-            { error ->
-                _state.update { currentState ->
-                    currentState.copy(
-                        error = error.message
-                    )
-                }
-            }
-        )
+            )
+        }
+    }
+
+    private fun goToEmitScreen() {
+        viewModelScope.launch {
+            delay(3000)
+            _navigation.send(LoginViewModelStateEvents.Navigation.GoToEmitScreen)
+        }
     }
 
     private fun signOut() {
@@ -61,7 +75,7 @@ object LoginViewModelStateEvents {
     )
 
     sealed interface Event {
-        data object SignIn : Event
+        data object FetchAttributes : Event
         data object SignOut : Event
         data object GoToEmitScreen : Event
     }

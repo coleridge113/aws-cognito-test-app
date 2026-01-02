@@ -123,6 +123,7 @@ dependencies {
     // AWS Amplify Authenticator
     implementation("com.amplifyframework.ui:authenticator:1.8.0")
     implementation("com.amplifyframework:core:2.31.0")
+    implementation("com.amplifyframework:aws-geo-location:2.31.0")
 
     // Koin
     implementation("io.insert-koin:koin-android:3.5.6") 

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.navigation.NavController
 import com.example.aws_cognito_test.presentation.screens.login.LoginViewModel
+import com.example.aws_cognito_test.presentation.screens.EmitScreen
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.ui.authenticator.ui.Authenticator
 import com.amplifyframework.ui.authenticator.AuthenticatorStepState
@@ -25,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.flowWithLifecycle
+import com.amplifyframework.ui.authenticator.AuthenticatorState
+import com.example.aws_cognito_test.presentation.Routes
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -40,7 +43,9 @@ fun LoginScreen(
         viewModel.navigation.flowWithLifecycle(lifecycleOwner.lifecycle)
             .collectLatest { navigation ->
                 when (navigation) {
-                    LoginViewModelStateEvents.Navigation.GoToEmitScreen -> {}
+                    LoginViewModelStateEvents.Navigation.GoToEmitScreen -> {
+                        navController.navigate(Routes.EmitRoute) 
+                    }
                 }
             }
     }
@@ -51,7 +56,7 @@ fun LoginScreen(
             uiState = uiState,
             onEvent = onEvent
         )
-    }
+   }
 }
 
 @Composable
@@ -62,26 +67,10 @@ fun MainContent(
 ) {
     Box(modifier.fillMaxSize()) {
         Authenticator { state ->
-            LaunchedEffect(Unit) {
-                onEvent(LoginViewModelStateEvents.Event.SignIn)
-            }
-
-            val user = uiState.success
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "Hello $user"
-                )
-                Button(
-                    onClick = {
-                        onEvent(LoginViewModelStateEvents.Event.SignOut)
-                    }
-                ) {
-                    Text(text = "Sign Out")
-                }
+            if (state.user.username.isNotEmpty()) {
+                onEvent(LoginViewModelStateEvents.Event.FetchAttributes)
+                val name = uiState.success
+                Text(text = "Hello $name")
             }
         }
     }
