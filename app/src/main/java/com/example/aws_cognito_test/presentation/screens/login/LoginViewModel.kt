@@ -57,7 +57,7 @@ class LoginViewModel : ViewModel() {
 
     private fun goToEmitScreen() {
         viewModelScope.launch {
-            delay(3000)
+            delay(2000)
             _navigation.send(LoginViewModelStateEvents.Navigation.GoToEmitScreen)
         }
     }

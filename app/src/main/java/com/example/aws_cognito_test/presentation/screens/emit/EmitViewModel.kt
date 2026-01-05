@@ -16,12 +16,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class EmitViewModel(
-    private val application: Application,
     private val trackingManager: TrackingManager
-) : AndroidViewModel(application) {
+) : ViewModel() {
 
-    @SuppressLint("StaticFieldLeak")
-    private val context = getApplication<Application>().applicationContext
     private val _state = MutableStateFlow(EmitStateEvents.UiState())
     val state: StateFlow<EmitStateEvents.UiState> = _state.asStateFlow()
     
@@ -53,12 +50,6 @@ class EmitViewModel(
             )
         }
         Log.d("EmitState", "Emitting: ${_state.value.success}")
-    }
-
-    init {
-        viewModelScope.launch {
-            trackingManager.updateLocation()
-        }
     }
 }
 

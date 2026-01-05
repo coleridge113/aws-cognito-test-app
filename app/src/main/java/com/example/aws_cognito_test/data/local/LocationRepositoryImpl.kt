@@ -1,0 +1,23 @@
+package com.example.aws_cognito_test.data.local
+
+import com.example.aws_cognito_test.data.database.dao.LocationDao
+import com.example.aws_cognito_test.data.database.entity.Location
+import com.example.aws_cognito_test.domain.repository.LocationRepository
+
+class LocationRepositoryImpl(
+    private val dao: LocationDao
+) : LocationRepository {
+
+    override suspend fun saveLocation(location: Location) {
+        dao.saveLocation(location)
+    }
+
+    override suspend fun getLocations(): List<Location> {
+        return dao.getLocations()
+    }
+
+    override suspend fun deleteLocations() {
+        dao.deleteLocations()
+    }
+
+}
