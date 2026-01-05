@@ -58,23 +58,11 @@ fun MainContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        OutlinedTextField(
-            state = lat,
-            label = { Text("Latitude") }
-        )
-
-        OutlinedTextField(
-            state = lng,
-            label = { Text("Longitude") }
-        )
-
-        Spacer(modifier = Modifier.padding(bottom = 10.dp))
-
         Button(
             onClick = {
                 Log.d(TAG, "Success state: ${uiState.success}")
                 if (!uiState.success) {
-                    onEvent(EmitStateEvents.Event.StartEmit(lat.text.toString(), lng.text.toString()))
+                    onEvent(EmitStateEvents.Event.StartEmit)
                 } else {
                     onEvent(EmitStateEvents.Event.StopEmit)
                 }

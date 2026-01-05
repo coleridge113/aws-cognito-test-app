@@ -6,6 +6,7 @@ import androidx.room.Room
 import org.koin.android.ext.koin.androidContext
 import com.example.aws_cognito_test.data.database.AppDatabase
 import com.example.aws_cognito_test.data.local.LocationRepositoryImpl
+import com.example.aws_cognito_test.data.utils.LocalFileLoader
 import com.example.aws_cognito_test.domain.utils.TrackingManager
 import com.example.aws_cognito_test.domain.repository.LocationRepository
 import com.example.aws_cognito_test.presentation.screens.emit.EmitViewModel
@@ -25,10 +26,13 @@ val appModule = module {
     single {
         TrackingManager()
     }
+    single {
+        LocalFileLoader(androidContext())
+    }
     viewModel {
         LoginViewModel()
     }
     viewModel {
-        EmitViewModel(get())
+        EmitViewModel(get(), get())
     }
 }

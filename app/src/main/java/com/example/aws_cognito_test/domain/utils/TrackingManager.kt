@@ -7,6 +7,7 @@ import aws.sdk.kotlin.services.location.model.DevicePositionUpdate
 import aws.smithy.kotlin.runtime.time.Clock
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.geo.location.AWSLocationGeoPlugin
+import com.example.aws_cognito_test.domain.model.Location
 
 const val TAG = "TrackingManager"
 
@@ -18,12 +19,9 @@ class TrackingManager {
     }
     private val client: LocationClient by lazy { geoPlugin.escapeHatch }
 
-    suspend fun updateLocation(
-        latitude: String = "13.9736382",
-        longitude: String = "121.6761132"
-    ) {
-        val lat = latitude.toDouble()
-        val lng = longitude.toDouble()
+    suspend fun updateLocation(location: Location) {
+        val lat = location.latitude
+        val lng = location.longitude
 
         val positionUpdate = DevicePositionUpdate {
             deviceId = "Device-1"
@@ -37,6 +35,7 @@ class TrackingManager {
                 positionUpdate
             )
         }
-        Log.d(TAG, "Successfully sent location: $positionUpdate")
+        Log.d(TAG, "Successfully sent location: $location")
     }
+
 }
