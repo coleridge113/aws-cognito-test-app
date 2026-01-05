@@ -12,6 +12,10 @@ class LocationRepositoryImpl(
         dao.saveLocation(location)
     }
 
+    override suspend fun saveLocations(locations: List<LocationEntity>) {
+        dao.saveLocations(locations)
+   }
+
     override suspend fun getLocations(): List<LocationEntity> {
         return dao.getLocations()
     }

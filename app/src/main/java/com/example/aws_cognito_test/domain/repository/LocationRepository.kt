@@ -6,6 +6,8 @@ interface LocationRepository {
 
     suspend fun saveLocation(location: LocationEntity)
 
+    suspend fun saveLocations(locations: List<LocationEntity>)
+
     suspend fun getLocations(): List<LocationEntity>
 
     suspend fun deleteLocations()

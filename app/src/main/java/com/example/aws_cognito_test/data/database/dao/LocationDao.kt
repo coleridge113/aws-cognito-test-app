@@ -11,6 +11,9 @@ interface LocationDao {
     @Insert
     suspend fun saveLocation(location: LocationEntity)
 
+    @Insert
+    suspend fun saveLocations(locations: List<LocationEntity>)
+
     @Query("SELECT * FROM location ORDER BY timestamp")
     suspend fun getLocations(): List<LocationEntity>
 
