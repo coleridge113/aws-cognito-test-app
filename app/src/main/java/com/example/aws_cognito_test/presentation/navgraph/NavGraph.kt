@@ -13,7 +13,7 @@ import org.koin.androidx.compose.koinViewModel
 import com.example.aws_cognito_test.presentation.screens.login.LoginScreen
 import com.example.aws_cognito_test.presentation.screens.login.LoginViewModel
 import com.example.aws_cognito_test.presentation.screens.EmitScreen
-import com.example.aws_cognito_test.presentation.screens.EmitViewModel
+import com.example.aws_cognito_test.presentation.screens.emit.EmitViewModel
 
 @ExperimentalMaterial3Api
 @ExperimentalSharedTransitionApi

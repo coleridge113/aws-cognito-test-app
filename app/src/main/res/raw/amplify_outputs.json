@@ -1,9 +1,9 @@
 {
   "auth": {
-    "user_pool_id": "ap-northeast-1_xPajN3Eto",
+    "user_pool_id": "ap-northeast-1_nSDb4aTUI",
     "aws_region": "ap-northeast-1",
-    "user_pool_client_id": "6omuni959rpgmnuf57gobpkoso",
-    "identity_pool_id": "ap-northeast-1:7f092924-a42e-4c13-bdac-8971bf5b08bb",
+    "user_pool_client_id": "5bajs9d4bscrg21ddgasgkntm3",
+    "identity_pool_id": "ap-northeast-1:aa3e4ee4-e5a5-4790-8f38-1b55971ab3b1",
     "mfa_methods": [],
     "standard_required_attributes": [
       "email"
@@ -25,5 +25,8 @@
     },
     "unauthenticated_identities_enabled": true
   },
-  "version": "1.4"
+  "version": "1.4",
+  "geo": {
+    "aws_region": "ap-northeast-1"
+  }
 }

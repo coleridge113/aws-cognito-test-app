@@ -11,11 +11,22 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
+    }
+
+    versionCatalogs {
+        create("awssdk") {
+            from("aws.sdk.kotlin:version-catalog:1.5.113")
+        }
     }
 }
 

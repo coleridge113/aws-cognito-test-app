@@ -18,13 +18,13 @@ class AwsApp : Application() {
             modules(appModule)
         }
         try {
-           Amplify.addPlugin(AWSCognitoAuthPlugin())
-           Amplify.addPlugin(AWSLocationGeoPlugin())
-           Amplify.configure(AmplifyOutputs(R.raw.amplify_outputs), applicationContext)
+            Amplify.addPlugin(AWSCognitoAuthPlugin())
+            Amplify.addPlugin(AWSLocationGeoPlugin())
+            Amplify.configure(AmplifyOutputs(R.raw.amplify_outputs), applicationContext)
             Log.i("MyAmplifyApp", "Initialized Amplify")
         } catch (e: Exception) {
             Log.e("MyAmplifyApp", "Could not initialize Amplify", e)
         }
-       
+
     }
 }
