@@ -52,6 +52,7 @@ fun MainContent(
 ) {
     val lat = rememberTextFieldState()
     val lng = rememberTextFieldState()
+
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
