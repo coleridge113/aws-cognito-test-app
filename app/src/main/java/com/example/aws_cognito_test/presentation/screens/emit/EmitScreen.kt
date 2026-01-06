@@ -66,7 +66,6 @@ fun MainContent(
                 } else {
                     onEvent(EmitStateEvents.Event.StopEmit)
                 }
-                Log.d("TextFields", "Coords: $lat, $lng")
             }
         ) {
             val s = if (!uiState.success) "Start" else "Stop"
