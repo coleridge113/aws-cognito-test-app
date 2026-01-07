@@ -21,6 +21,10 @@ import androidx.navigation.NavController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.aws_cognito_test.presentation.screens.emit.EmitStateEvents
 import com.example.aws_cognito_test.presentation.screens.emit.EmitViewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 
 const val TAG = "EmitScreen"
 
@@ -29,7 +33,7 @@ fun EmitScreen(
     viewModel: EmitViewModel,
     navController: NavController
 ) {
-    
+
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val onEvent = remember(viewModel) { viewModel::onEvent }
 
@@ -40,7 +44,7 @@ fun EmitScreen(
             modifier = Modifier.padding(innerPadding),
             uiState = uiState,
             onEvent = onEvent
-        )      
+        )
     }
 }
 
@@ -50,8 +54,20 @@ fun MainContent(
     uiState: EmitStateEvents.UiState,
     onEvent: (EmitStateEvents.Event) -> Unit
 ) {
-    val lat = rememberTextFieldState()
-    val lng = rememberTextFieldState()
+    val context = LocalContext.current
+    val permissions = arrayOf(
+        android.Manifest.permission.ACCESS_FINE_LOCATION,
+        android.Manifest.permission.ACCESS_COARSE_LOCATION
+    )
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionsResult ->
+        val isGranted = permissionsResult.values.all { it }
+        if (isGranted) {
+            onEvent(EmitStateEvents.Event.StartEmit)
+        }
+    }
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -60,9 +76,19 @@ fun MainContent(
     ) {
         Button(
             onClick = {
-                Log.d(TAG, "Success state: ${uiState.success}")
                 if (!uiState.success) {
-                    onEvent(EmitStateEvents.Event.StartEmit)
+                    val arePermissionsGranted = permissions.all {
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            it
+                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    }
+
+                    if (arePermissionsGranted) {
+                        onEvent(EmitStateEvents.Event.StartEmit)
+                    } else {
+                        launcher.launch(permissions)
+                    }
                 } else {
                     onEvent(EmitStateEvents.Event.StopEmit)
                 }

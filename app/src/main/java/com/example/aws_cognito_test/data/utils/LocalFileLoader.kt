@@ -17,7 +17,7 @@ class LocalFileLoader(
     suspend fun loadRoutePoints(): Flow<Location> {
         return flow {
             try {
-                val inputStream = context.assets.open("location_data.txt")
+                val inputStream = context.assets.open("location_data1.txt")
                 val reader = BufferedReader(InputStreamReader(inputStream))
                 reader.useLines { lines ->
                     lines.forEachIndexed { idx, line ->
@@ -37,7 +37,7 @@ class LocalFileLoader(
                             )                       
                             emit(location)
                         }
-                        delay(2000)
+                        // delay(2000)
                     }
                 }
             } catch (e: Exception) {

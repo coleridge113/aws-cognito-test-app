@@ -24,7 +24,7 @@ class TrackingManager {
         val lng = location.longitude
 
         val positionUpdate = DevicePositionUpdate {
-            deviceId = "Device-1"
+            deviceId = "Device-3"
             position = listOf(lng, lat)
             sampleTime = Clock.System.now()
         }

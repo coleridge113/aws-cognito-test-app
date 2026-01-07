@@ -1,9 +1,14 @@
 package com.example.aws_cognito_test.presentation.screens.emit
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import android.util.Log
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.aws_cognito_test.data.utils.LocalFileLoader
+import com.example.aws_cognito_test.data.utils.OSLocationManager
 import com.example.aws_cognito_test.domain.utils.TrackingManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +19,8 @@ import kotlinx.coroutines.launch
 
 class EmitViewModel(
     private val trackingManager: TrackingManager,
-    private val fileLoader: LocalFileLoader
+    private val fileLoader: LocalFileLoader,
+    private val locationManager: OSLocationManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(EmitStateEvents.UiState())
@@ -29,6 +35,7 @@ class EmitViewModel(
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun startEmitting() {
         emitJob = viewModelScope.launch {
             _state.update { curr ->
@@ -38,6 +45,9 @@ class EmitViewModel(
             }
             fileLoader.loadRoutePoints().collect { location ->
                 trackingManager.updateLocation(location)
+            }
+            locationManager.requestPriorityGPS().collect { location ->
+                Log.d("LocationManager", "$location")
             }
         }
 
