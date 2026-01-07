@@ -14,17 +14,19 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.aws_cognito_test.presentation.screens.emit.EmitStateEvents
-import com.example.aws_cognito_test.presentation.screens.emit.EmitViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.core.content.ContextCompat
+import com.example.aws_cognito_test.presentation.screens.emit.EmitStateEvents
+import com.example.aws_cognito_test.presentation.screens.emit.EmitViewModel
 
 const val TAG = "EmitScreen"
 
@@ -74,8 +76,19 @@ fun MainContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        val focusManager = LocalFocusManager.current
+        val deviceIdState = rememberTextFieldState("")
+        OutlinedTextField(
+            state = deviceIdState,
+            label = { Text(text = "Device ID") },
+            placeholder = { Text("Enter Device ID") }
+        )
+
+        Spacer(modifier = Modifier.padding(top = 20.dp))
+
         Button(
             onClick = {
+                focusManager.clearFocus()
                 if (!uiState.success) {
                     val arePermissionsGranted = permissions.all {
                         ContextCompat.checkSelfPermission(
@@ -101,7 +114,9 @@ fun MainContent(
         Spacer(modifier = Modifier.padding(top = 20.dp))
         Button(
             onClick = {
-                onEvent(EmitStateEvents.Event.SendUpdates)
+                focusManager.clearFocus()
+                val deviceId = deviceIdState.text.toString()
+                onEvent(EmitStateEvents.Event.SendUpdates(deviceId))
             } 
         ) {
             Text(text = "Send Updates")

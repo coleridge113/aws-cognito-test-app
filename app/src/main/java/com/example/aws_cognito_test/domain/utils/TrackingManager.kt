@@ -27,7 +27,7 @@ class TrackingManager {
         val lng = location.longitude
 
         val positionUpdate = DevicePositionUpdate {
-            deviceId = "Device-3"
+            deviceId = "Device-2"
             position = listOf(lng, lat)
             sampleTime = Clock.System.now()
         }
@@ -41,13 +41,13 @@ class TrackingManager {
         Log.d(TAG, "Successfully sent location: $location")
     }
 
-    suspend fun batchUpdateLocation(locations: List<Location>) {
+    suspend fun batchUpdateLocation(id: String, locations: List<Location>) {
         val chunks = locations.chunked(10)
 
         for(chunk in chunks) {
             val updates = chunk.map { loc ->
                 DevicePositionUpdate {
-                    deviceId = "Device-3"
+                    deviceId = id
                     position = listOf(loc.longitude, loc.latitude)
                     sampleTime = convertTimestampToInstant(loc.timestamp)
                 }

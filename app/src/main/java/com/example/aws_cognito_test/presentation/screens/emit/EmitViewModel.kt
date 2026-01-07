@@ -1,10 +1,7 @@
 package com.example.aws_cognito_test.presentation.screens.emit
 
-import android.Manifest
 import android.annotation.SuppressLint
-import android.content.pm.PackageManager
 import android.util.Log
-import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.aws_cognito_test.data.database.entity.LocationEntity
@@ -38,7 +35,7 @@ class EmitViewModel(
         when (event) {
             EmitStateEvents.Event.StartEmit -> { startEmitting() }
             EmitStateEvents.Event.StopEmit -> { stopEmitting() }
-            EmitStateEvents.Event.SendUpdates -> { sendUpdates() }
+            is EmitStateEvents.Event.SendUpdates -> { sendUpdates(event.deviceId) }
         }
     }
 
@@ -82,13 +79,13 @@ class EmitViewModel(
         Log.d("EmitState", "Emitting: ${_state.value.success}")
     }
 
-    private fun sendUpdates() {
+    private fun sendUpdates(deviceId: String) {
         viewModelScope.launch {
             val locations = repository.getLocations().map {
                 it.toModel()
             }
             try {
-                trackingManager.batchUpdateLocation(locations)
+                trackingManager.batchUpdateLocation(deviceId, locations)
                 repository.deleteLocations()
             } catch (e: HttpException) {
                 Log.e("EmitViewModel", "Error uploading: ${e.message}")
@@ -110,7 +107,7 @@ object EmitStateEvents {
     sealed interface Event {
         data object StartEmit : Event
         data object StopEmit : Event
-        data object SendUpdates : Event
+        data class SendUpdates(val deviceId: String) : Event
     }
 
 }
