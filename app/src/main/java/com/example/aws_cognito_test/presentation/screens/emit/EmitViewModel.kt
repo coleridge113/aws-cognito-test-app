@@ -7,8 +7,11 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.aws_cognito_test.data.database.entity.LocationEntity
+import com.example.aws_cognito_test.data.mapper.toModel
 import com.example.aws_cognito_test.data.utils.LocalFileLoader
 import com.example.aws_cognito_test.data.utils.OSLocationManager
+import com.example.aws_cognito_test.domain.repository.LocationRepository
 import com.example.aws_cognito_test.domain.utils.TrackingManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,11 +19,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
+import java.io.IOException
 
 class EmitViewModel(
     private val trackingManager: TrackingManager,
     private val fileLoader: LocalFileLoader,
-    private val locationManager: OSLocationManager
+    private val locationManager: OSLocationManager,
+    private val repository: LocationRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(EmitStateEvents.UiState())
@@ -32,6 +38,7 @@ class EmitViewModel(
         when (event) {
             EmitStateEvents.Event.StartEmit -> { startEmitting() }
             EmitStateEvents.Event.StopEmit -> { stopEmitting() }
+            EmitStateEvents.Event.SendUpdates -> { sendUpdates() }
         }
     }
 
@@ -43,11 +50,22 @@ class EmitViewModel(
                     success = true
                 )
             }
-            fileLoader.loadRoutePoints().collect { location ->
-                trackingManager.updateLocation(location)
-            }
+            // fileLoader.loadRoutePoints().collect { location ->
+            //     trackingManager.updateLocation(location)
+            // }
+
             locationManager.requestPriorityGPS().collect { location ->
-                Log.d("LocationManager", "$location")
+                Log.d("EmitViewModel", "Received: $location")
+                val entity = LocationEntity(
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                    timestamp = System.currentTimeMillis()
+                )
+                try {
+                    repository.saveLocation(entity)
+                } catch (e: IOException) {
+                    Log.e("EmitViewModel", "Failed to save: ${e.message}")
+                }
             }
         }
 
@@ -63,6 +81,22 @@ class EmitViewModel(
         emitJob?.cancel()
         Log.d("EmitState", "Emitting: ${_state.value.success}")
     }
+
+    private fun sendUpdates() {
+        viewModelScope.launch {
+            val locations = repository.getLocations().map {
+                it.toModel()
+            }
+            try {
+                trackingManager.batchUpdateLocation(locations)
+                repository.deleteLocations()
+            } catch (e: HttpException) {
+                Log.e("EmitViewModel", "Error uploading: ${e.message}")
+            } catch (e: IOException) {
+                Log.e("EmitViewModel", "Error repo: ${e.message}")
+            }
+        }
+    }
 }
 
 object EmitStateEvents {
@@ -76,6 +110,7 @@ object EmitStateEvents {
     sealed interface Event {
         data object StartEmit : Event
         data object StopEmit : Event
+        data object SendUpdates : Event
     }
 
 }

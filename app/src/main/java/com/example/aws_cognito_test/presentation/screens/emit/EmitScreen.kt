@@ -95,7 +95,16 @@ fun MainContent(
             }
         ) {
             val s = if (!uiState.success) "Start" else "Stop"
-            Text(text = "$s Emitting")
+            Text(text = "$s Storing")
+        }
+
+        Spacer(modifier = Modifier.padding(top = 20.dp))
+        Button(
+            onClick = {
+                onEvent(EmitStateEvents.Event.SendUpdates)
+            } 
+        ) {
+            Text(text = "Send Updates")
         }
     }
 }
