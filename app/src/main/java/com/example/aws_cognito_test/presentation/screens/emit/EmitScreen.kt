@@ -78,10 +78,19 @@ fun MainContent(
     ) {
         val focusManager = LocalFocusManager.current
         val deviceIdState = rememberTextFieldState("")
+        val jobOrderState = rememberTextFieldState("")
         OutlinedTextField(
             state = deviceIdState,
             label = { Text(text = "Device ID") },
             placeholder = { Text("Enter Device ID") }
+        )
+
+        Spacer(modifier = Modifier.padding(top = 10.dp))
+
+        OutlinedTextField(
+            state = jobOrderState,
+            label = { Text(text = "Job Order #") },
+            placeholder = { Text("Enter Job Order") }
         )
 
         Spacer(modifier = Modifier.padding(top = 20.dp))
@@ -116,7 +125,8 @@ fun MainContent(
             onClick = {
                 focusManager.clearFocus()
                 val deviceId = deviceIdState.text.toString()
-                onEvent(EmitStateEvents.Event.SendUpdates(deviceId))
+                val jobOrderId = jobOrderState.text.toString()
+                onEvent(EmitStateEvents.Event.SendUpdates(deviceId, jobOrderId))
             } 
         ) {
             Text(text = "Send Updates")

@@ -7,10 +7,10 @@ import aws.sdk.kotlin.services.location.model.DevicePositionUpdate
 import aws.smithy.kotlin.runtime.time.Clock
 import aws.smithy.kotlin.runtime.time.Instant
 import aws.smithy.kotlin.runtime.time.fromEpochMilliseconds
+import aws.smithy.kotlin.runtime.http.HttpException
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.geo.location.AWSLocationGeoPlugin
 import com.example.aws_cognito_test.domain.model.Location
-import kotlin.time.ExperimentalTime
 
 const val TAG = "TrackingManager"
 
@@ -41,8 +41,13 @@ class TrackingManager {
         Log.d(TAG, "Successfully sent location: $location")
     }
 
-    suspend fun batchUpdateLocation(id: String, locations: List<Location>) {
+    suspend fun batchUpdateLocation(
+        id: String, 
+        jobOrderId: String,
+        locations: List<Location>
+    ) {
         val chunks = locations.chunked(10)
+        val properties = mapOf(Pair("jobOrderId", jobOrderId))
 
         for(chunk in chunks) {
             val updates = chunk.map { loc ->
@@ -50,11 +55,18 @@ class TrackingManager {
                     deviceId = id
                     position = listOf(loc.longitude, loc.latitude)
                     sampleTime = convertTimestampToInstant(loc.timestamp)
+                    positionProperties = properties
                 }
             }
-            client.batchUpdateDevicePosition {
-                trackerName = trackerResource
-                this.updates = updates
+            try {
+                client.batchUpdateDevicePosition {
+                    trackerName = trackerResource
+                    this.updates = updates
+                }
+            } catch (e: HttpException) {
+                Log.e(TAG, "No internet: ${e.message}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error: ${e.message}")
             }
             Log.d(TAG, "Uploaded: $updates")
         }

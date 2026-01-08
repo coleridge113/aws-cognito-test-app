@@ -35,7 +35,10 @@ class EmitViewModel(
         when (event) {
             EmitStateEvents.Event.StartEmit -> { startEmitting() }
             EmitStateEvents.Event.StopEmit -> { stopEmitting() }
-            is EmitStateEvents.Event.SendUpdates -> { sendUpdates(event.deviceId) }
+            is EmitStateEvents.Event.SendUpdates -> { sendUpdates(
+                event.deviceId,
+                event.jobOrderId
+            ) }
         }
     }
 
@@ -79,13 +82,17 @@ class EmitViewModel(
         Log.d("EmitState", "Emitting: ${_state.value.success}")
     }
 
-    private fun sendUpdates(deviceId: String) {
+    private fun sendUpdates(deviceId: String, jobOrderId: String) {
         viewModelScope.launch {
             val locations = repository.getLocations().map {
                 it.toModel()
             }
             try {
-                trackingManager.batchUpdateLocation(deviceId, locations)
+                trackingManager.batchUpdateLocation(
+                    deviceId, 
+                    jobOrderId,
+                    locations
+                )
                 repository.deleteLocations()
             } catch (e: HttpException) {
                 Log.e("EmitViewModel", "Error uploading: ${e.message}")
@@ -107,7 +114,7 @@ object EmitStateEvents {
     sealed interface Event {
         data object StartEmit : Event
         data object StopEmit : Event
-        data class SendUpdates(val deviceId: String) : Event
+        data class SendUpdates(val deviceId: String, val jobOrderId: String) : Event
     }
 
 }
