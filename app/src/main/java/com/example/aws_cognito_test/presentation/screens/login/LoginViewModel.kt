@@ -3,6 +3,7 @@ package com.example.aws_cognito_test.presentation.screens.login
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.util.copy
 import com.amplifyframework.core.Amplify
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -21,12 +22,22 @@ class LoginViewModel : ViewModel() {
     private val _state = MutableStateFlow(LoginViewModelStateEvents.UiState())
     val state: StateFlow<LoginViewModelStateEvents.UiState> = _state.asStateFlow()
 
+    private val _permissionsState = MutableStateFlow(false)
+    val permissionsState = _permissionsState.asStateFlow()
+
     fun onEvent(event: LoginViewModelStateEvents.Event) {
         when (event) {
             LoginViewModelStateEvents.Event.FetchAttributes -> { fetchUserAttributes() }
             LoginViewModelStateEvents.Event.SignOut -> { signOut() }
             LoginViewModelStateEvents.Event.GoToEmitScreen -> { goToEmitScreen() }
+            LoginViewModelStateEvents.Event.GrantPermissions -> { grantPermissions() }
         }
+    }
+
+    private fun grantPermissions() {
+        _permissionsState.update { 
+            true
+        } 
     }
 
     private fun fetchUserAttributes() {
@@ -71,13 +82,14 @@ object LoginViewModelStateEvents {
     data class UiState(
         val isLoading: Boolean = false,
         val error: String? = "",
-        val success: String? = ""
+        val success: String? = "",
     )
 
     sealed interface Event {
         data object FetchAttributes : Event
         data object SignOut : Event
         data object GoToEmitScreen : Event
+        data object GrantPermissions : Event
     }
 
     sealed class Navigation {

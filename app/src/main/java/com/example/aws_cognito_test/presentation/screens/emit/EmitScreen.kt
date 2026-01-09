@@ -54,21 +54,6 @@ fun MainContent(
     uiState: EmitStateEvents.UiState,
     onEvent: (EmitStateEvents.Event) -> Unit
 ) {
-    val context = LocalContext.current
-    val permissions = arrayOf(
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION
-    )
-
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissionsResult ->
-        val isGranted = permissionsResult.values.all { it }
-        if (isGranted) {
-            onEvent(EmitStateEvents.Event.StartEmit)
-        }
-    }
-
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -77,6 +62,7 @@ fun MainContent(
         val focusManager = LocalFocusManager.current
         val deviceIdState = rememberTextFieldState("Device-")
         val jobOrderState = rememberTextFieldState("JobOrder-")
+
         OutlinedTextField(
             state = deviceIdState,
             label = { Text(text = "Device ID") },
@@ -95,18 +81,7 @@ fun MainContent(
             onClick = {
                 focusManager.clearFocus()
                 if (!uiState.success) {
-                    val arePermissionsGranted = permissions.all {
-                        ContextCompat.checkSelfPermission(
-                            context,
-                            it
-                        ) == PackageManager.PERMISSION_GRANTED
-                    }
-
-                    if (arePermissionsGranted) {
-                        onEvent(EmitStateEvents.Event.StartEmit)
-                    } else {
-                        launcher.launch(permissions)
-                    }
+                    onEvent(EmitStateEvents.Event.StartEmit)
                 } else {
                     onEvent(EmitStateEvents.Event.StopEmit)
                 }
