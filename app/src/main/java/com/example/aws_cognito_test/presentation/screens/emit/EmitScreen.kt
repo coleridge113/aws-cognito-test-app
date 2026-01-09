@@ -83,14 +83,14 @@ fun MainContent(
             Button(
                 onClick = {
                     focusManager.clearFocus()
-                    if (!uiState.success) {
+                    if (!uiState.isEmitting) {
                         onEvent(EmitStateEvents.Event.StartEmit)
                     } else {
                         onEvent(EmitStateEvents.Event.StopEmit)
                     }
                 }
             ) {
-                val action = if (!uiState.success) "Start" else "Stop"
+                val action = if (!uiState.isEmitting) "Start" else "Stop"
                 val preference = if (uiState.isChecked) "Emitting" else "Storing"
                 Text(text = "$action $preference")
             }
@@ -100,7 +100,7 @@ fun MainContent(
                 onCheckedChange = {
                     onEvent(EmitStateEvents.Event.ToggleCheckbox)
                 },
-                modifier = Modifier.offset(x = (-60).dp)
+                modifier = Modifier.offset(x = (-75).dp)
             )
         }
 
@@ -119,7 +119,7 @@ fun MainContent(
                     Text(text = "Send Updates")
                 }
 
-                Spacer(modifier = Modifier.height(12.dp)) // now works
+                Spacer(modifier = Modifier.height(12.dp))
             }
         }
 

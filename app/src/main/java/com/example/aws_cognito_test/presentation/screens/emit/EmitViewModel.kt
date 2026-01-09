@@ -54,7 +54,7 @@ class EmitViewModel(
         emitJob = viewModelScope.launch {
             _state.update { curr ->
                 curr.copy(
-                    success = true
+                    isEmitting = true
                 )
             }
             // fileLoader.loadRoutePoints().collect { location ->
@@ -76,17 +76,17 @@ class EmitViewModel(
             }
         }
 
-        Log.d("EmitState", "Emitting: ${_state.value.success}")
+        Log.d("EmitState", "Emitting: ${_state.value.isEmitting}")
     }
 
     private fun stopEmitting() {
         _state.update { curr ->
             curr.copy(
-                success = false
+                isEmitting = false
             )
         }
         emitJob?.cancel()
-        Log.d("EmitState", "Emitting: ${_state.value.success}")
+        Log.d("EmitState", "Emitting: ${_state.value.isEmitting}")
     }
 
     private fun sendUpdates(deviceId: String, jobOrderId: String) {
@@ -135,7 +135,7 @@ object EmitStateEvents {
     data class UiState(
         val isLoading: Boolean = false,
         val error: String = "",
-        val success: Boolean = false,
+        val isEmitting: Boolean = false,
         val isChecked: Boolean = false
     )
 
