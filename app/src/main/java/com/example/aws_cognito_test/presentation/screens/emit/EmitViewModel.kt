@@ -35,6 +35,7 @@ class EmitViewModel(
         when (event) {
             EmitStateEvents.Event.StartEmit -> { startEmitting() }
             EmitStateEvents.Event.StopEmit -> { stopEmitting() }
+            EmitStateEvents.Event.ToggleCheckbox -> { toggleCheckbox() }
             is EmitStateEvents.Event.SendUpdates -> { sendUpdates(
                 event.deviceId,
                 event.jobOrderId
@@ -117,6 +118,16 @@ class EmitViewModel(
             }
         }
     }
+
+    private fun toggleCheckbox() {
+        viewModelScope.launch {
+            _state.update { curr ->
+                curr.copy(
+                    isChecked = !curr.isChecked
+                )   
+            }
+        }
+    }
 }
 
 object EmitStateEvents {
@@ -124,12 +135,14 @@ object EmitStateEvents {
     data class UiState(
         val isLoading: Boolean = false,
         val error: String = "",
-        val success: Boolean = false
+        val success: Boolean = false,
+        val isChecked: Boolean = false
     )
 
     sealed interface Event {
         data object StartEmit : Event
         data object StopEmit : Event
+        data object ToggleCheckbox : Event
         data class SendUpdates(val deviceId: String, val jobOrderId: String) : Event
         data class EvaluateGeo(val deviceId: String, val jobOrderId: String) : Event
     }
