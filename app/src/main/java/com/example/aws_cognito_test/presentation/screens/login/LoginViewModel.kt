@@ -40,7 +40,7 @@ class LoginViewModel : ViewModel() {
                             }?.value.toString()
                         )
                     }
-                    goToEmitScreen()
+                    onEvent(LoginViewModelStateEvents.Event.GoToEmitScreen)
                     Log.d("Authentication", "Successfully logged in: ${_state.value}")
                 },
                 { error ->

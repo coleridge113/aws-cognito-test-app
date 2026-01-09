@@ -1,6 +1,7 @@
-package com.example.aws_cognito_test.presentation.screens
+package com.example.aws_cognito_test.presentation.screens.emit
 
-import android.util.Log
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
@@ -25,8 +25,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.core.content.ContextCompat
-import com.example.aws_cognito_test.presentation.screens.emit.EmitStateEvents
-import com.example.aws_cognito_test.presentation.screens.emit.EmitViewModel
 
 const val TAG = "EmitScreen"
 
@@ -58,8 +56,8 @@ fun MainContent(
 ) {
     val context = LocalContext.current
     val permissions = arrayOf(
-        android.Manifest.permission.ACCESS_FINE_LOCATION,
-        android.Manifest.permission.ACCESS_COARSE_LOCATION
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
     )
 
     val launcher = rememberLauncherForActivityResult(
@@ -101,7 +99,7 @@ fun MainContent(
                         ContextCompat.checkSelfPermission(
                             context,
                             it
-                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        ) == PackageManager.PERMISSION_GRANTED
                     }
 
                     if (arePermissionsGranted) {
