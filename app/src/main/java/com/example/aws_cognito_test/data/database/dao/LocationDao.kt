@@ -17,6 +17,9 @@ interface LocationDao {
     @Query("SELECT * FROM location ORDER BY timestamp")
     suspend fun getLocations(): List<LocationEntity>
 
+    @Query("SELECT * FROM location ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLastLocation(): LocationEntity?
+
     @Query("DELETE FROM location")
     suspend fun deleteLocations()
 

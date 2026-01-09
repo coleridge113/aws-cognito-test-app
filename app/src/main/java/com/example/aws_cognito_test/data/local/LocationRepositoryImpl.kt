@@ -20,8 +20,11 @@ class LocationRepositoryImpl(
         return dao.getLocations()
     }
 
+    override suspend fun getLastLocation(): LocationEntity? {
+        return dao.getLastLocation()
+    }
+
     override suspend fun deleteLocations() {
         dao.deleteLocations()
     }
-
 }

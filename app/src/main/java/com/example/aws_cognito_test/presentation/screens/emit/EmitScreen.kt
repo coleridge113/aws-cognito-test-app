@@ -77,12 +77,11 @@ fun MainContent(
         verticalArrangement = Arrangement.Center
     ) {
         val focusManager = LocalFocusManager.current
-        val deviceIdState = rememberTextFieldState("")
-        val jobOrderState = rememberTextFieldState("")
+        val deviceIdState = rememberTextFieldState("Device-")
+        val jobOrderState = rememberTextFieldState("JobOrder-")
         OutlinedTextField(
             state = deviceIdState,
             label = { Text(text = "Device ID") },
-            placeholder = { Text("Enter Device ID") }
         )
 
         Spacer(modifier = Modifier.padding(top = 10.dp))
@@ -90,7 +89,6 @@ fun MainContent(
         OutlinedTextField(
             state = jobOrderState,
             label = { Text(text = "Job Order #") },
-            placeholder = { Text("Enter Job Order") }
         )
 
         Spacer(modifier = Modifier.padding(top = 20.dp))
@@ -130,6 +128,18 @@ fun MainContent(
             } 
         ) {
             Text(text = "Send Updates")
+        }
+
+        Spacer(modifier = Modifier.padding(top = 20.dp))
+        Button(
+            onClick = {
+                focusManager.clearFocus()
+                val deviceId = deviceIdState.text.toString()
+                val jobOrderId = jobOrderState.text.toString()
+                onEvent(EmitStateEvents.Event.EvaluateGeo(deviceId, jobOrderId))
+            } 
+        ) {
+            Text(text = "Evaluate Geo")
         }
     }
 }

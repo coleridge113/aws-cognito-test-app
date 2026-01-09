@@ -20,10 +20,10 @@ import retrofit2.HttpException
 import java.io.IOException
 
 class EmitViewModel(
-    private val trackingManager: TrackingManager,
     private val fileLoader: LocalFileLoader,
-    private val locationManager: OSLocationManager,
-    private val repository: LocationRepository
+    private val repository: LocationRepository,
+    private val trackingManager: TrackingManager,
+    private val locationManager: OSLocationManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(EmitStateEvents.UiState())
@@ -39,6 +39,12 @@ class EmitViewModel(
                 event.deviceId,
                 event.jobOrderId
             ) }
+            is EmitStateEvents.Event.EvaluateGeo -> {
+                evaluateGeo(
+                    event.deviceId,
+                    event.jobOrderId
+                )
+            }
         }
     }
 
@@ -101,6 +107,16 @@ class EmitViewModel(
             }
         }
     }
+
+    private fun evaluateGeo(deviceId: String, jobOrderId: String) {
+        viewModelScope.launch {
+            val lastLocation = repository.getLastLocation()?.toModel()
+            
+            lastLocation?.let { location ->
+                trackingManager.evaluateGeofence(deviceId, jobOrderId, location)
+            }
+        }
+    }
 }
 
 object EmitStateEvents {
@@ -115,6 +131,7 @@ object EmitStateEvents {
         data object StartEmit : Event
         data object StopEmit : Event
         data class SendUpdates(val deviceId: String, val jobOrderId: String) : Event
+        data class EvaluateGeo(val deviceId: String, val jobOrderId: String) : Event
     }
 
 }

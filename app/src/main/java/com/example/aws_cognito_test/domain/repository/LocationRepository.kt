@@ -10,6 +10,8 @@ interface LocationRepository {
 
     suspend fun getLocations(): List<LocationEntity>
 
+    suspend fun getLastLocation(): LocationEntity?
+
     suspend fun deleteLocations()
 
 }

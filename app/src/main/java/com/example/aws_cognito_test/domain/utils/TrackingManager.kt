@@ -2,6 +2,7 @@ package com.example.aws_cognito_test.domain.utils
 
 import android.util.Log
 import aws.sdk.kotlin.services.location.LocationClient
+import aws.sdk.kotlin.services.location.batchEvaluateGeofences
 import aws.sdk.kotlin.services.location.batchUpdateDevicePosition
 import aws.sdk.kotlin.services.location.model.DevicePositionUpdate
 import aws.smithy.kotlin.runtime.time.Clock
@@ -16,6 +17,7 @@ const val TAG = "TrackingManager"
 
 class TrackingManager {
     private val trackerResource = "MetromartDemoTracker"
+    private val geofenceCollection = "MetromartDemoGeofenceCollection"
 
     private val geoPlugin: AWSLocationGeoPlugin by lazy { 
         Amplify.Geo.getPlugin("awsLocationGeoPlugin") as AWSLocationGeoPlugin
@@ -71,6 +73,26 @@ class TrackingManager {
             Log.d(TAG, "Uploaded: $updates")
         }
 
+    }
+
+    suspend fun evaluateGeofence(id: String, jobOrderId: String, location: Location) {
+        val properties = mapOf(Pair("jobOrderId", jobOrderId))
+        val update = DevicePositionUpdate {
+            deviceId = id
+            position = listOf(location.latitude, location.longitude)
+            sampleTime = convertTimestampToInstant(location.timestamp)
+            positionProperties = properties
+
+        }
+        try {
+            client.batchEvaluateGeofences {
+                collectionName = geofenceCollection
+                devicePositionUpdates = listOf(update)
+            }
+            Log.d(TAG, "Sent location for geo evaluation")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error evaluating location: ${e.message}")
+        }
     }
 
     private fun convertTimestampToInstant(timestamp: Long): Instant {
