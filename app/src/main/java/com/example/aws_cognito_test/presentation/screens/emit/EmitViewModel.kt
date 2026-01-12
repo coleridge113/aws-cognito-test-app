@@ -33,7 +33,9 @@ class EmitViewModel(
 
     fun onEvent(event: EmitStateEvents.Event) {
         when (event) {
-            EmitStateEvents.Event.StartEmit -> { startEmitting() }
+            is EmitStateEvents.Event.StartEmit -> { 
+                startEmitting(event.deviceId, event.jobOrderId)
+            }
             EmitStateEvents.Event.StopEmit -> { stopEmitting() }
             EmitStateEvents.Event.ToggleCheckbox -> { toggleCheckbox() }
             is EmitStateEvents.Event.SendUpdates -> { sendUpdates(
@@ -50,26 +52,31 @@ class EmitViewModel(
     }
 
     @SuppressLint("MissingPermission")
-    private fun startEmitting() {
+    private fun startEmitting(
+        deviceId: String = "",
+        jobOrderId: String = ""
+    ) {
         emitJob = viewModelScope.launch {
             _state.update { curr ->
                 curr.copy(
                     isEmitting = true
                 )
             }
-            // fileLoader.loadRoutePoints().collect { location ->
-            //     trackingManager.updateLocation(location)
-            // }
 
             locationManager.requestPriorityGPS().collect { location ->
                 Log.d("EmitViewModel", "Received: $location")
+                val preferLiveUpdate = _state.value.isChecked
                 val entity = LocationEntity(
                     latitude = location.latitude,
                     longitude = location.longitude,
                     timestamp = System.currentTimeMillis()
                 )
                 try {
-                    repository.saveLocation(entity)
+                    if (preferLiveUpdate) {
+                        trackingManager.updateLocationLive(deviceId, jobOrderId, entity.toModel())
+                    } else {
+                        repository.saveLocation(entity)
+                    }
                 } catch (e: IOException) {
                     Log.e("EmitViewModel", "Failed to save: ${e.message}")
                 }
@@ -140,7 +147,7 @@ object EmitStateEvents {
     )
 
     sealed interface Event {
-        data object StartEmit : Event
+        data class StartEmit(val deviceId: String = "", val jobOrderId: String = "") : Event
         data object StopEmit : Event
         data object ToggleCheckbox : Event
         data class SendUpdates(val deviceId: String, val jobOrderId: String) : Event

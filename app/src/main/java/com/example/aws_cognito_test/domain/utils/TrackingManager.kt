@@ -24,14 +24,16 @@ class TrackingManager {
     }
     private val client: LocationClient by lazy { geoPlugin.escapeHatch }
 
-    suspend fun updateLocation(location: Location) {
+    suspend fun updateLocationLive(deviceId: String, jobOrderId: String, location: Location) {
         val lat = location.latitude
         val lng = location.longitude
+        val properties = mapOf(Pair("jobOrderId", jobOrderId))
 
         val positionUpdate = DevicePositionUpdate {
-            deviceId = "Device-2"
+            this.deviceId = deviceId
             position = listOf(lng, lat)
             sampleTime = Clock.System.now()
+            positionProperties = properties
         }
 
         client.batchUpdateDevicePosition {

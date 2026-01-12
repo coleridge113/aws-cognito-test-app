@@ -82,9 +82,17 @@ fun MainContent(
         Box {
             Button(
                 onClick = {
+                    val deviceId = deviceIdState.text.toString()
+                    val jobOrderId = jobOrderState.text.toString()
+
                     focusManager.clearFocus()
                     if (!uiState.isEmitting) {
-                        onEvent(EmitStateEvents.Event.StartEmit)
+                        onEvent(EmitStateEvents.Event
+                            .StartEmit(
+                                deviceId = deviceId,
+                                jobOrderId = jobOrderId
+                            )
+                        )
                     } else {
                         onEvent(EmitStateEvents.Event.StopEmit)
                     }
