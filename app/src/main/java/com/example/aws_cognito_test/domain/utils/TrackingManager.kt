@@ -27,7 +27,10 @@ class TrackingManager {
     suspend fun updateLocationLive(deviceId: String, jobOrderId: String, location: Location) {
         val lat = location.latitude
         val lng = location.longitude
-        val properties = mapOf(Pair("jobOrderId", jobOrderId))
+        val properties = mapOf(
+            Pair("jobOrderId", jobOrderId),
+            Pair("key2", "value2")
+        )
 
         val positionUpdate = DevicePositionUpdate {
             this.deviceId = deviceId
@@ -78,7 +81,8 @@ class TrackingManager {
     }
 
     suspend fun evaluateGeofence(id: String, jobOrderId: String, location: Location) {
-        val properties = mapOf(Pair("jobOrderId", jobOrderId))
+        updateLocationLive(deviceId = id, jobOrderId = jobOrderId, location = location)
+        val properties = mapOf(Pair("jobOrderId", jobOrderId),)
         val update = DevicePositionUpdate {
             deviceId = id
             position = listOf(location.latitude, location.longitude)

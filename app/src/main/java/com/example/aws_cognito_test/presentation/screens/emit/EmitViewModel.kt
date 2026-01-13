@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.aws_cognito_test.data.database.entity.LocationEntity
+import com.example.aws_cognito_test.domain.model.Location
 import com.example.aws_cognito_test.data.mapper.toModel
 import com.example.aws_cognito_test.data.utils.LocalFileLoader
 import com.example.aws_cognito_test.data.utils.OSLocationManager
@@ -28,6 +29,9 @@ class EmitViewModel(
 
     private val _state = MutableStateFlow(EmitStateEvents.UiState())
     val state: StateFlow<EmitStateEvents.UiState> = _state.asStateFlow()
+
+    private val _currentLocationState = MutableStateFlow<Location?>(null)
+    val currentLocationState = _currentLocationState.asStateFlow()
 
     private var emitJob: Job? = null
 
@@ -71,6 +75,9 @@ class EmitViewModel(
                     longitude = location.longitude,
                     timestamp = System.currentTimeMillis()
                 )
+
+                _currentLocationState.emit(entity.toModel())
+
                 try {
                     if (preferLiveUpdate) {
                         trackingManager.updateLocationLive(deviceId, jobOrderId, entity.toModel())
@@ -118,10 +125,8 @@ class EmitViewModel(
 
     private fun evaluateGeo(deviceId: String, jobOrderId: String) {
         viewModelScope.launch {
-            val lastLocation = repository.getLastLocation()?.toModel()
-            
-            lastLocation?.let { location ->
-                trackingManager.evaluateGeofence(deviceId, jobOrderId, location)
+            currentLocationState.value?.let {
+                trackingManager.evaluateGeofence(deviceId, jobOrderId, it) 
             }
         }
     }
@@ -147,9 +152,9 @@ object EmitStateEvents {
     )
 
     sealed interface Event {
-        data class StartEmit(val deviceId: String = "", val jobOrderId: String = "") : Event
         data object StopEmit : Event
         data object ToggleCheckbox : Event
+        data class StartEmit(val deviceId: String = "", val jobOrderId: String = "") : Event
         data class SendUpdates(val deviceId: String, val jobOrderId: String) : Event
         data class EvaluateGeo(val deviceId: String, val jobOrderId: String) : Event
     }
