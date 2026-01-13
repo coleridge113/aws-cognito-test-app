@@ -20,10 +20,10 @@ import retrofit2.HttpException
 import java.io.IOException
 
 class EmitViewModel(
-    private val trackingManager: TrackingManager,
     private val fileLoader: LocalFileLoader,
-    private val locationManager: OSLocationManager,
-    private val repository: LocationRepository
+    private val repository: LocationRepository,
+    private val trackingManager: TrackingManager,
+    private val locationManager: OSLocationManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(EmitStateEvents.UiState())
@@ -33,53 +33,67 @@ class EmitViewModel(
 
     fun onEvent(event: EmitStateEvents.Event) {
         when (event) {
-            EmitStateEvents.Event.StartEmit -> { startEmitting() }
+            is EmitStateEvents.Event.StartEmit -> { 
+                startEmitting(event.deviceId, event.jobOrderId)
+            }
             EmitStateEvents.Event.StopEmit -> { stopEmitting() }
+            EmitStateEvents.Event.ToggleCheckbox -> { toggleCheckbox() }
             is EmitStateEvents.Event.SendUpdates -> { sendUpdates(
                 event.deviceId,
                 event.jobOrderId
             ) }
+            is EmitStateEvents.Event.EvaluateGeo -> {
+                evaluateGeo(
+                    event.deviceId,
+                    event.jobOrderId
+                )
+            }
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun startEmitting() {
+    private fun startEmitting(
+        deviceId: String = "",
+        jobOrderId: String = ""
+    ) {
         emitJob = viewModelScope.launch {
             _state.update { curr ->
                 curr.copy(
-                    success = true
+                    isEmitting = true
                 )
             }
-            // fileLoader.loadRoutePoints().collect { location ->
-            //     trackingManager.updateLocation(location)
-            // }
 
             locationManager.requestPriorityGPS().collect { location ->
                 Log.d("EmitViewModel", "Received: $location")
+                val preferLiveUpdate = _state.value.isChecked
                 val entity = LocationEntity(
                     latitude = location.latitude,
                     longitude = location.longitude,
                     timestamp = System.currentTimeMillis()
                 )
                 try {
-                    repository.saveLocation(entity)
+                    if (preferLiveUpdate) {
+                        trackingManager.updateLocationLive(deviceId, jobOrderId, entity.toModel())
+                    } else {
+                        repository.saveLocation(entity)
+                    }
                 } catch (e: IOException) {
                     Log.e("EmitViewModel", "Failed to save: ${e.message}")
                 }
             }
         }
 
-        Log.d("EmitState", "Emitting: ${_state.value.success}")
+        Log.d("EmitState", "Emitting: ${_state.value.isEmitting}")
     }
 
     private fun stopEmitting() {
         _state.update { curr ->
             curr.copy(
-                success = false
+                isEmitting = false
             )
         }
         emitJob?.cancel()
-        Log.d("EmitState", "Emitting: ${_state.value.success}")
+        Log.d("EmitState", "Emitting: ${_state.value.isEmitting}")
     }
 
     private fun sendUpdates(deviceId: String, jobOrderId: String) {
@@ -101,6 +115,26 @@ class EmitViewModel(
             }
         }
     }
+
+    private fun evaluateGeo(deviceId: String, jobOrderId: String) {
+        viewModelScope.launch {
+            val lastLocation = repository.getLastLocation()?.toModel()
+            
+            lastLocation?.let { location ->
+                trackingManager.evaluateGeofence(deviceId, jobOrderId, location)
+            }
+        }
+    }
+
+    private fun toggleCheckbox() {
+        viewModelScope.launch {
+            _state.update { curr ->
+                curr.copy(
+                    isChecked = !curr.isChecked
+                )   
+            }
+        }
+    }
 }
 
 object EmitStateEvents {
@@ -108,13 +142,16 @@ object EmitStateEvents {
     data class UiState(
         val isLoading: Boolean = false,
         val error: String = "",
-        val success: Boolean = false
+        val isEmitting: Boolean = false,
+        val isChecked: Boolean = false
     )
 
     sealed interface Event {
-        data object StartEmit : Event
+        data class StartEmit(val deviceId: String = "", val jobOrderId: String = "") : Event
         data object StopEmit : Event
+        data object ToggleCheckbox : Event
         data class SendUpdates(val deviceId: String, val jobOrderId: String) : Event
+        data class EvaluateGeo(val deviceId: String, val jobOrderId: String) : Event
     }
 
 }

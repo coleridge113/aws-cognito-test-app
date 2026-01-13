@@ -1,4 +1,4 @@
-package com.example.aws_cognito_test.presentation
+package com.example.aws_cognito_test.presentation.navgraph
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -9,10 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.aws_cognito_test.presentation.Routes
 import org.koin.androidx.compose.koinViewModel
 import com.example.aws_cognito_test.presentation.screens.login.LoginScreen
 import com.example.aws_cognito_test.presentation.screens.login.LoginViewModel
-import com.example.aws_cognito_test.presentation.screens.EmitScreen
+import com.example.aws_cognito_test.presentation.screens.emit.EmitScreen
 import com.example.aws_cognito_test.presentation.screens.emit.EmitViewModel
 
 @ExperimentalMaterial3Api
