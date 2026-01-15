@@ -126,10 +126,11 @@ dependencies {
     implementation("com.amplifyframework:core:2.31.0")
     implementation("com.amplifyframework:aws-geo-location:2.31.0")
 
-    // AWS Kotlin SDK
+    // AWS Kotlin SDK - Location
     implementation("software.amazon.location:tracking:1.0.1")
-    // implementation("software.amazon.location:auth:1.1.1")
-    // implementation("aws.sdk.kotlin:location:1.5.113")
+
+    // AWS Kotlin SDK - IOT
+    implementation("software.amazon.awssdk.iotdevicesdk:aws-iot-device-sdk-android:1.29.1")
 
     // Koin
     implementation("io.insert-koin:koin-android:3.5.6") 
