@@ -76,7 +76,6 @@ class IotManager(private val context: Context) {
     }
     private fun initMqttClientWithX() {
         val clientEndpoint = readFile("endpoint.txt")?.trim()
-        Log.d("IotManager", "$clientEndpoint")
         if (clientEndpoint == null || certificateData == null || keyData == null || rootCA == null) {
             Log.e("IotManager", "Missing required credential files in assets!")
             return
@@ -88,7 +87,7 @@ class IotManager(private val context: Context) {
         
 
         client = builder.build()
-        client.start()
+        start()
     }
 
     private fun start() {
@@ -97,6 +96,7 @@ class IotManager(private val context: Context) {
     }
 
     private fun publishTestMessage() {
+        Log.d("IotManager", "Sending a test message...")
         val topic = "android"
         val jsonPayload = """{"message": "Hello from Android!", "timestamp": "${System.currentTimeMillis()}"}"""
 
