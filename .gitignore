@@ -17,3 +17,4 @@ local.properties
 .kotlin/
 kls_database.db
 *amplify_outputs.json
+*assets/

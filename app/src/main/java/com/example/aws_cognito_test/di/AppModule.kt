@@ -9,6 +9,7 @@ import com.example.aws_cognito_test.data.local.LocationRepositoryImpl
 import com.example.aws_cognito_test.data.utils.LocalFileLoader
 import com.example.aws_cognito_test.data.utils.OSLocationManager
 import com.example.aws_cognito_test.domain.utils.TrackingManager
+import com.example.aws_cognito_test.domain.utils.IotManager
 import com.example.aws_cognito_test.domain.repository.LocationRepository
 import com.example.aws_cognito_test.presentation.screens.emit.EmitViewModel
 import com.example.aws_cognito_test.presentation.screens.login.LoginViewModel
@@ -33,10 +34,13 @@ val appModule = module {
     single {
         OSLocationManager(androidContext())
     }
+    single {
+        IotManager(androidContext())
+    }
     viewModel {
         LoginViewModel()
     }
     viewModel {
-        EmitViewModel(get(), get(), get(), get())
+        EmitViewModel(get(), get(), get(), get(), get())
     }
 }

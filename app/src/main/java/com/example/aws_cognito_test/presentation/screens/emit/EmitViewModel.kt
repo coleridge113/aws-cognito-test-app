@@ -11,6 +11,7 @@ import com.example.aws_cognito_test.data.utils.LocalFileLoader
 import com.example.aws_cognito_test.data.utils.OSLocationManager
 import com.example.aws_cognito_test.domain.repository.LocationRepository
 import com.example.aws_cognito_test.domain.utils.TrackingManager
+import com.example.aws_cognito_test.domain.utils.IotManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,8 +25,13 @@ class EmitViewModel(
     private val fileLoader: LocalFileLoader,
     private val repository: LocationRepository,
     private val trackingManager: TrackingManager,
-    private val locationManager: OSLocationManager
+    private val locationManager: OSLocationManager,
+    private val iotManager: IotManager
 ) : ViewModel() {
+
+    init {
+        iotManager.fetchAndInitIot()
+    }
 
     private val _state = MutableStateFlow(EmitStateEvents.UiState())
     val state: StateFlow<EmitStateEvents.UiState> = _state.asStateFlow()
