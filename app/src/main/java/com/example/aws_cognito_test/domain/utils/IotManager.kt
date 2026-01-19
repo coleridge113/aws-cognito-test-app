@@ -23,6 +23,8 @@ import software.amazon.awssdk.crt.io.TlsContextOptions
 import software.amazon.awssdk.crt.io.ClientTlsContext
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
+import com.example.aws_cognito_test.domain.model.Location
+import com.google.gson.Gson
 import software.amazon.awssdk.crt.mqtt.QualityOfService
 import software.amazon.awssdk.crt.mqtt5.QOS
 
@@ -92,12 +94,31 @@ class IotManager(private val context: Context) {
 
     private fun start() {
         client.start()
-        publishTestMessage()
+    }
+
+    fun publishMessage(deviceId: String, location: Location) {
+        val topic = "tracker/$deviceId/update"
+        val jsonPayload = Gson().toJson(location, Location::class.java)
+
+        val publishPacket = PublishPacket.PublishPacketBuilder()
+            .withTopic(topic)
+            .withPayload(jsonPayload.toByteArray())
+            .withQOS(QOS.AT_LEAST_ONCE)
+            .build()
+        
+        client.publish(publishPacket).whenComplete { res, throwable ->
+            if (throwable != null) {
+                Log.e("IotManager", "Publish failed: ${throwable.message}")
+            } else {
+                Log.d("IotManager", "Published $location\nto $topic")
+            }
+        }
+        
     }
 
     private fun publishTestMessage() {
         Log.d("IotManager", "Sending a test message...")
-        val topic = "android"
+        val topic = "tracker/Device-1/update"
         val jsonPayload = """{"message": "Hello from Android!", "timestamp": "${System.currentTimeMillis()}"}"""
 
         val publishPacket = PublishPacket.PublishPacketBuilder()

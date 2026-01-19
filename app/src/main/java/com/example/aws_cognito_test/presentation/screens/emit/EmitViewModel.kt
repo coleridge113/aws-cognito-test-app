@@ -86,7 +86,8 @@ class EmitViewModel(
 
                 try {
                     if (preferLiveUpdate) {
-                        trackingManager.updateLocationLive(deviceId, jobOrderId, entity.toModel())
+                        // trackingManager.updateLocationLive(deviceId, jobOrderId, entity.toModel())
+                        iotManager.publishMessage(deviceId, entity.toModel())
                     } else {
                         repository.saveLocation(entity)
                     }
