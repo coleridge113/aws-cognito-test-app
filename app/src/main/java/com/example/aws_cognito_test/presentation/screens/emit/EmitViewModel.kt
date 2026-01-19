@@ -155,7 +155,7 @@ object EmitStateEvents {
         val isLoading: Boolean = false,
         val error: String = "",
         val isEmitting: Boolean = false,
-        val isChecked: Boolean = false
+        val isChecked: Boolean = true
     )
 
     sealed interface Event {

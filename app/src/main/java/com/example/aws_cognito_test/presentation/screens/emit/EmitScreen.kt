@@ -62,8 +62,8 @@ fun MainContent(
             .animateContentSize()
     ) {
         val focusManager = LocalFocusManager.current
-        val deviceIdState = rememberTextFieldState("Device-")
-        val jobOrderState = rememberTextFieldState("JobOrder-")
+        val deviceIdState = rememberTextFieldState("Device-1")
+        val jobOrderState = rememberTextFieldState("JobOrder-1")
 
         OutlinedTextField(
             state = deviceIdState,
