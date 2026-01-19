@@ -27,9 +27,12 @@ import com.example.aws_cognito_test.domain.model.Location
 import com.google.gson.Gson
 import software.amazon.awssdk.crt.mqtt.QualityOfService
 import software.amazon.awssdk.crt.mqtt5.QOS
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.launchIn
 
 class IotManager(private val context: Context) {
-    // private val clientEndpoint = readFile("endpoint.txt")
     private val certificateData = readFile("device.pem.crt")?.trim()
     private val keyData = readFile("private_pkcs8.key")?.trim()
     private val rootCA = readFile("AmazonRootCA1.pem")?.trim()
@@ -70,12 +73,12 @@ class IotManager(private val context: Context) {
         
         val builder = AwsIotMqtt5ClientBuilder.newWebsocketMqttBuilderWithSigv4Auth(clientEndpoint, websocketConfig)
             .withLifeCycleEvents(MqttLifeCycleEvents())
-            .withPublishEvents(MqttPublishEvents())
 
         client = builder.build()
         client.start()
 
     }
+
     private fun initMqttClientWithX() {
         val clientEndpoint = readFile("endpoint.txt")?.trim()
         if (clientEndpoint == null || certificateData == null || keyData == null || rootCA == null) {
@@ -85,20 +88,18 @@ class IotManager(private val context: Context) {
         val builder = AwsIotMqtt5ClientBuilder.newDirectMqttBuilderWithMtlsFromMemory(clientEndpoint, certificateData, keyData)
             .withCertificateAuthority(rootCA)
             .withLifeCycleEvents(MqttLifeCycleEvents())
-            .withPublishEvents(MqttPublishEvents())
-        
 
         client = builder.build()
-        start()
-    }
-
-    private fun start() {
         client.start()
     }
 
-    fun publishMessage(deviceId: String, location: Location) {
+    fun publishMessage(deviceId: String, jobOrderId: String, location: Location) {
         val topic = "tracker/$deviceId/update"
-        val jsonPayload = Gson().toJson(location, Location::class.java)
+        val jsonTree = Gson().toJsonTree(location, Location::class.java)
+        val jsonObject = jsonTree.asJsonObject
+        jsonObject.addProperty("deviceId", deviceId)
+        jsonObject.addProperty("jobOrderId", jobOrderId)
+        val jsonPayload = jsonObject.toString()
 
         val publishPacket = PublishPacket.PublishPacketBuilder()
             .withTopic(topic)
@@ -106,7 +107,7 @@ class IotManager(private val context: Context) {
             .withQOS(QOS.AT_LEAST_ONCE)
             .build()
         
-        client.publish(publishPacket).whenComplete { res, throwable ->
+        client.publish(publishPacket).whenComplete { _, throwable ->
             if (throwable != null) {
                 Log.e("IotManager", "Publish failed: ${throwable.message}")
             } else {
@@ -114,26 +115,6 @@ class IotManager(private val context: Context) {
             }
         }
         
-    }
-
-    private fun publishTestMessage() {
-        Log.d("IotManager", "Sending a test message...")
-        val topic = "tracker/Device-1/update"
-        val jsonPayload = """{"message": "Hello from Android!", "timestamp": "${System.currentTimeMillis()}"}"""
-
-        val publishPacket = PublishPacket.PublishPacketBuilder()
-            .withTopic(topic)
-            .withPayload(jsonPayload.toByteArray())
-            .withQOS(QOS.AT_LEAST_ONCE)
-            .build()
-        
-        client.publish(publishPacket).whenComplete { res, throwable ->
-            if (throwable != null) {
-                Log.e("IotManager", "Publish failed: ${throwable.message}")
-            } else {
-                Log.d("IotManager", "Message published successfully to $topic")
-            }
-        }
     }
 
     private fun readFile(fileName: String): String? {
@@ -180,16 +161,6 @@ class IotManager(private val context: Context) {
         ) {
             Log.d("IotManager", "Stopped!")
         }
-    }
-
-    inner class MqttPublishEvents: Mqtt5ClientOptions.PublishEvents {
-        override fun onMessageReceived(
-            client: Mqtt5Client?,
-            publishReturn: PublishReturn?
-        ) {
-            Log.d("IotManager", "Message received!")
-        }
-
     }
 }
 
