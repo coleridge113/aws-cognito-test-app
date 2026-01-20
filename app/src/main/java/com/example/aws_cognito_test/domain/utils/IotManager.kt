@@ -1,36 +1,26 @@
 package com.example.aws_cognito_test.domain.utils
 
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.io.IOException
-import android.util.Log
 import android.content.Context
+import android.util.Log
+import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
+import com.amplifyframework.core.Amplify
+import com.example.aws_cognito_test.domain.model.Location
+import com.google.gson.Gson
+import software.amazon.awssdk.crt.auth.credentials.CognitoCredentialsProvider
+import software.amazon.awssdk.crt.io.ClientBootstrap
+import software.amazon.awssdk.crt.io.ClientTlsContext
+import software.amazon.awssdk.crt.io.TlsContextOptions
 import software.amazon.awssdk.crt.mqtt5.Mqtt5Client
-import software.amazon.awssdk.iot.AwsIotMqtt5ClientBuilder
 import software.amazon.awssdk.crt.mqtt5.Mqtt5ClientOptions
 import software.amazon.awssdk.crt.mqtt5.OnAttemptingConnectReturn
 import software.amazon.awssdk.crt.mqtt5.OnConnectionFailureReturn
 import software.amazon.awssdk.crt.mqtt5.OnConnectionSuccessReturn
 import software.amazon.awssdk.crt.mqtt5.OnDisconnectionReturn
 import software.amazon.awssdk.crt.mqtt5.OnStoppedReturn
-import software.amazon.awssdk.crt.mqtt5.PublishReturn
-import software.amazon.awssdk.crt.mqtt5.packets.PublishPacket
-import software.amazon.awssdk.crt.auth.credentials.CognitoCredentialsProvider
-import software.amazon.awssdk.crt.io.ClientBootstrap
-import software.amazon.awssdk.crt.io.TlsContextOptions
-import software.amazon.awssdk.crt.io.ClientTlsContext
-import com.amplifyframework.core.Amplify
-import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
-import com.example.aws_cognito_test.domain.model.Location
-import com.google.gson.Gson
-import software.amazon.awssdk.crt.mqtt.QualityOfService
 import software.amazon.awssdk.crt.mqtt5.QOS
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.launchIn
+import software.amazon.awssdk.crt.mqtt5.packets.PublishPacket
+import software.amazon.awssdk.iot.AwsIotMqtt5ClientBuilder
+import java.io.IOException
 
 class IotManager(private val context: Context) {
     private val certificateData = readFile("device.pem.crt")?.trim()
@@ -85,8 +75,13 @@ class IotManager(private val context: Context) {
             Log.e("IotManager", "Missing required credential files in assets!")
             return
         }
+
         val builder = AwsIotMqtt5ClientBuilder.newDirectMqttBuilderWithMtlsFromMemory(clientEndpoint, certificateData, keyData)
             .withCertificateAuthority(rootCA)
+            .withClientId("Rider-1")
+            .withSessionExpiryIntervalSeconds(3600L)
+            .withSessionBehavior(Mqtt5ClientOptions.ClientSessionBehavior.REJOIN_ALWAYS)
+            .withKeepAliveIntervalSeconds(60L)
             .withLifeCycleEvents(MqttLifeCycleEvents())
 
         client = builder.build()
