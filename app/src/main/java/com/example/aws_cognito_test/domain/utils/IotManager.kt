@@ -109,7 +109,6 @@ class IotManager(private val context: Context) {
                 Log.d("IotManager", "Published $location\nto $topic")
             }
         }
-        
     }
 
     private fun readFile(fileName: String): String? {
@@ -128,10 +127,7 @@ class IotManager(private val context: Context) {
         ) {
             Log.d("IotManager", "Attempting to connect...")
         }
-
-        override fun onConnectionSuccess(
-            client: Mqtt5Client?,
-            onConnectionSuccessReturn: OnConnectionSuccessReturn?
+        override fun onConnectionSuccess( client: Mqtt5Client?, onConnectionSuccessReturn: OnConnectionSuccessReturn?
         ) {
             Log.d("IotManager", "Connection success!")
         }
