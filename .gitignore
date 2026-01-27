@@ -18,3 +18,9 @@ local.properties
 kls_database.db
 *amplify_outputs.json
 *assets/
+.project
+.classpath
+.settings
+app/.project
+app/.classpath
+app/.settings
