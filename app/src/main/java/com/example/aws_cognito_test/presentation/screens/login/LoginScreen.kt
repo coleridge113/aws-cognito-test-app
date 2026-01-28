@@ -109,6 +109,7 @@ fun MainContent(
         Authenticator { state ->
             if (state.user.username.isNotEmpty()) {
                 onEvent(LoginViewModelStateEvents.Event.FetchAttributes)
+                onEvent(LoginViewModelStateEvents.Event.FetchToken)
                 val name = uiState.success
                 Text(text = "Hello $name")
             }

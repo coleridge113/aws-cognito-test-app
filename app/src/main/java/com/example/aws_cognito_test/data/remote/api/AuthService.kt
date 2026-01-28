@@ -7,6 +7,6 @@ import com.example.aws_cognito_test.data.remote.dto.AuthResponse
 interface AuthService {
 
     @POST("/login")
-    fun fetchToken(): AuthResponse
+    suspend fun fetchToken(): AuthResponse
 
 }

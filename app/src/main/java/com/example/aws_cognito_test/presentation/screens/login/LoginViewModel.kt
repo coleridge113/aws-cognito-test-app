@@ -14,8 +14,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import com.example.aws_cognito_test.domain.usecase.GetTokenUseCase
 
-class LoginViewModel : ViewModel() {
+class LoginViewModel(
+    private val getTokenUseCase: GetTokenUseCase
+) : ViewModel() {
     private val _navigation = Channel<LoginViewModelStateEvents.Navigation>()
     val navigation: Flow<LoginViewModelStateEvents.Navigation> = _navigation.receiveAsFlow()
 
@@ -27,10 +30,11 @@ class LoginViewModel : ViewModel() {
 
     fun onEvent(event: LoginViewModelStateEvents.Event) {
         when (event) {
-            LoginViewModelStateEvents.Event.FetchAttributes -> { fetchUserAttributes() }
-            LoginViewModelStateEvents.Event.SignOut -> { signOut() }
-            LoginViewModelStateEvents.Event.GoToEmitScreen -> { goToEmitScreen() }
-            LoginViewModelStateEvents.Event.GrantPermissions -> { grantPermissions() }
+            LoginViewModelStateEvents.Event.FetchAttributes -> fetchUserAttributes()
+            LoginViewModelStateEvents.Event.SignOut -> signOut()
+            LoginViewModelStateEvents.Event.GoToEmitScreen -> goToEmitScreen()
+            LoginViewModelStateEvents.Event.GrantPermissions -> grantPermissions()
+            LoginViewModelStateEvents.Event.FetchToken -> fetchToken()
         }
     }
 
@@ -66,6 +70,12 @@ class LoginViewModel : ViewModel() {
         }
     }
 
+    private fun fetchToken() {
+        viewModelScope.launch {
+            getTokenUseCase()
+        }
+    }
+
     private fun goToEmitScreen() {
         viewModelScope.launch {
             delay(2000)
@@ -90,6 +100,7 @@ object LoginViewModelStateEvents {
         data object SignOut : Event
         data object GoToEmitScreen : Event
         data object GrantPermissions : Event
+        data object FetchToken : Event
     }
 
     sealed class Navigation {

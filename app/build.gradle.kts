@@ -166,4 +166,6 @@ dependencies {
     // Datastore
     implementation("androidx.datastore:datastore-preferences:1.2.0")
 
+    // JWT
+    implementation("com.auth0.android:jwtdecode:2.0.2")
 }

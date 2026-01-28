@@ -10,9 +10,12 @@ import com.example.aws_cognito_test.data.datastore.dataStore
 import com.example.aws_cognito_test.data.database.AppDatabase
 import com.example.aws_cognito_test.data.datastore.AuthLocalDataSource
 import com.example.aws_cognito_test.data.remote.api.AuthService
+import com.example.aws_cognito_test.data.remote.source.AuthRemoteDataSource
 import com.example.aws_cognito_test.data.local.LocationRepositoryImpl
+import com.example.aws_cognito_test.data.local.AuthRepositoryImpl
 import com.example.aws_cognito_test.data.utils.LocalFileLoader
 import com.example.aws_cognito_test.data.utils.OSLocationManager
+import com.example.aws_cognito_test.domain.repository.AuthRepository
 import com.example.aws_cognito_test.domain.utils.TrackingManager
 import com.example.aws_cognito_test.domain.utils.IotManager
 import com.example.aws_cognito_test.domain.repository.LocationRepository
@@ -20,12 +23,14 @@ import com.example.aws_cognito_test.presentation.screens.emit.EmitViewModel
 import com.example.aws_cognito_test.presentation.screens.login.LoginViewModel
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import com.example.aws_cognito_test.domain.usecase.GetTokenUseCase
 
 val appModule = module {
     single {
         Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:8080/")
+            .baseUrl("http://10.0.2.2:3000/")
             .addConverterFactory(GsonConverterFactory.create())
+            .build()
     }
     single {
         get<Retrofit>().create(AuthService::class.java)
@@ -43,8 +48,14 @@ val appModule = module {
     single {
         AuthLocalDataSource(get())
     }
+    single {
+        AuthRemoteDataSource(get())
+    }
     single<LocationRepository>{
         LocationRepositoryImpl(get<AppDatabase>().locationDao())
+    }
+    single<AuthRepository>{
+        AuthRepositoryImpl(get(), get())
     }
     single {
         TrackingManager()
@@ -58,8 +69,11 @@ val appModule = module {
     single {
         IotManager(androidContext())
     }
+    factory {
+        GetTokenUseCase(get())
+    }
     viewModel {
-        LoginViewModel()
+        LoginViewModel(get())
     }
     viewModel {
         EmitViewModel(get(), get(), get(), get(), get())
