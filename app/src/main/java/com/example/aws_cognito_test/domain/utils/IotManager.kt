@@ -5,6 +5,7 @@ import android.util.Log
 import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.core.Amplify
 import com.example.aws_cognito_test.domain.model.Location
+import com.example.aws_cognito_test.BuildConfig
 import com.google.gson.Gson
 import software.amazon.awssdk.crt.auth.credentials.CognitoCredentialsProvider
 import software.amazon.awssdk.crt.io.ClientBootstrap
@@ -34,9 +35,9 @@ class IotManager(private val context: Context) {
         Amplify.Auth.fetchAuthSession(
             { result ->
                 val cognitoSession = result as AWSCognitoAuthSession
-                val identityid = cognitoSession.identityIdResult.value
+                val identityId = cognitoSession.identityIdResult.value
 
-                if (identityid != null) {
+                if (identityId != null) {
                     initMqttClientWithX()
                 } else {
                     Log.e("IotManager", "User is not signed in!")
@@ -71,8 +72,8 @@ class IotManager(private val context: Context) {
     }
 
     private fun initMqttClientWithX() {
-        val clientEndpoint = readFile("endpoint.txt")?.trim()
-        if (clientEndpoint == null || certificateData == null || keyData == null || rootCA == null) {
+        val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
+        if (certificateData == null || keyData == null || rootCA == null) {
             Log.e("IotManager", "Missing required credential files in assets!")
             return
         }
@@ -90,7 +91,7 @@ class IotManager(private val context: Context) {
     }
 
     private fun initMqttClientWithCustom(token: String) {
-        val clientEndpoint = readFile("endpoint.txt")?.trim()
+        val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
         val customAuthConfig = AwsIotMqtt5ClientBuilder.MqttConnectCustomAuthConfig().apply {
             authorizerName = "CustomAuthorizer"
             password = token.toByteArray(Charsets.UTF_8)
