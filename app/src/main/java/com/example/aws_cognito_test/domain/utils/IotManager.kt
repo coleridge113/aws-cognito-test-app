@@ -21,6 +21,7 @@ import software.amazon.awssdk.crt.mqtt5.QOS
 import software.amazon.awssdk.crt.mqtt5.packets.PublishPacket
 import software.amazon.awssdk.iot.AwsIotMqtt5ClientBuilder
 import java.io.IOException
+import kotlin.apply
 
 class IotManager(private val context: Context) {
     private val certificateData = readFile("device.pem.crt")?.trim()
@@ -83,6 +84,22 @@ class IotManager(private val context: Context) {
             .withSessionBehavior(Mqtt5ClientOptions.ClientSessionBehavior.REJOIN_ALWAYS)
             .withKeepAliveIntervalSeconds(60L)
             .withLifeCycleEvents(MqttLifeCycleEvents())
+
+        client = builder.build()
+        client.start()
+    }
+
+    private fun initMqttClientWithCustom(token: String) {
+        val clientEndpoint = readFile("endpoint.txt")?.trim()
+        val customAuthConfig = AwsIotMqtt5ClientBuilder.MqttConnectCustomAuthConfig().apply {
+            authorizerName = "CustomAuthorizer"
+            password = token.toByteArray(Charsets.UTF_8)
+            username = "guest"
+            tokenKeyName = null
+            tokenValue = null
+            tokenSignature = null
+        }
+        val builder = AwsIotMqtt5ClientBuilder.newWebsocketMqttBuilderWithCustomAuth(clientEndpoint, customAuthConfig)
 
         client = builder.build()
         client.start()
