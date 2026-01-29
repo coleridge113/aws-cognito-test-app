@@ -76,6 +76,6 @@ val appModule = module {
         LoginViewModel(get())
     }
     viewModel {
-        EmitViewModel(get(), get(), get(), get(), get())
+        EmitViewModel(get(), get(), get(), get(), get(), get())
     }
 }

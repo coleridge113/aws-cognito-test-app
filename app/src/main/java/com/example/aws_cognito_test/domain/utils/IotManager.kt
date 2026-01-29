@@ -90,7 +90,7 @@ class IotManager(private val context: Context) {
         client.start()
     }
 
-    private fun initMqttClientWithCustom(token: String) {
+    fun initMqttClientWithCustom(token: String) {
         val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
         val customAuthConfig = AwsIotMqtt5ClientBuilder.MqttConnectCustomAuthConfig().apply {
             authorizerName = "CustomAuthorizer"
@@ -103,6 +103,7 @@ class IotManager(private val context: Context) {
         val builder = AwsIotMqtt5ClientBuilder.newWebsocketMqttBuilderWithCustomAuth(clientEndpoint, customAuthConfig)
 
         client = builder.build()
+        Log.d("IoTManager", "Successfully built MQTT Client!")
         client.start()
     }
 

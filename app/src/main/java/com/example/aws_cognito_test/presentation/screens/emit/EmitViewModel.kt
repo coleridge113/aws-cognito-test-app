@@ -12,6 +12,7 @@ import com.example.aws_cognito_test.data.utils.OSLocationManager
 import com.example.aws_cognito_test.domain.repository.LocationRepository
 import com.example.aws_cognito_test.domain.utils.TrackingManager
 import com.example.aws_cognito_test.domain.utils.IotManager
+import com.example.aws_cognito_test.domain.usecase.GetTokenUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,17 +21,23 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
+import org.koin.androidx.compose.viewModel
 
 class EmitViewModel(
     private val fileLoader: LocalFileLoader,
-    private val repository: LocationRepository,
+    private val locationRepository: LocationRepository,
     private val trackingManager: TrackingManager,
     private val locationManager: OSLocationManager,
-    private val iotManager: IotManager
+    private val iotManager: IotManager,
+    private val getTokenUseCase: GetTokenUseCase
 ) : ViewModel() {
 
     init {
-        iotManager.fetchAndInitIot()
+        viewModelScope.launch {
+            getTokenUseCase()?.let { token ->
+                iotManager.initMqttClientWithCustom(token)
+            }
+        }
     }
 
     private val _state = MutableStateFlow(EmitStateEvents.UiState())
@@ -89,7 +96,7 @@ class EmitViewModel(
                         // trackingManager.updateLocationLive(deviceId, jobOrderId, entity.toModel())
                         iotManager.publishMessage(deviceId, jobOrderId, entity.toModel())
                     } else {
-                        repository.saveLocation(entity)
+                        locationRepository.saveLocation(entity)
                     }
                 } catch (e: IOException) {
                     Log.e("EmitViewModel", "Failed to save: ${e.message}")
@@ -112,7 +119,7 @@ class EmitViewModel(
 
     private fun sendUpdates(deviceId: String, jobOrderId: String) {
         viewModelScope.launch {
-            val locations = repository.getLocations().map {
+            val locations = locationRepository.getLocations().map {
                 it.toModel()
             }
             try {
@@ -121,7 +128,7 @@ class EmitViewModel(
                     jobOrderId,
                     locations
                 )
-                repository.deleteLocations()
+                locationRepository.deleteLocations()
             } catch (e: HttpException) {
                 Log.e("EmitViewModel", "Error uploading: ${e.message}")
             } catch (e: IOException) {
