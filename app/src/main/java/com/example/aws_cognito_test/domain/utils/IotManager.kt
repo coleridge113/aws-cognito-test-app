@@ -38,7 +38,7 @@ class IotManager(private val context: Context) {
                 val identityId = cognitoSession.identityIdResult.value
 
                 if (identityId != null) {
-                    initMqttClientWithX()
+                    initMqttClientWithCognito(identityId)
                 } else {
                     Log.e("IotManager", "User is not signed in!")
                 }
@@ -71,7 +71,7 @@ class IotManager(private val context: Context) {
 
     }
 
-    private fun initMqttClientWithX() {
+    fun initMqttClientWithX() {
         val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
         if (certificateData == null || keyData == null || rootCA == null) {
             Log.e("IotManager", "Missing required credential files in assets!")
@@ -91,6 +91,7 @@ class IotManager(private val context: Context) {
     }
 
     fun initMqttClientWithCustom(token: String) {
+        Log.d("IoTManager", "Token: $token")
         val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
         val customAuthConfig = AwsIotMqtt5ClientBuilder.MqttConnectCustomAuthConfig().apply {
             authorizerName = "CustomAuthorizer"
@@ -101,10 +102,15 @@ class IotManager(private val context: Context) {
             tokenSignature = null
         }
         val builder = AwsIotMqtt5ClientBuilder.newWebsocketMqttBuilderWithCustomAuth(clientEndpoint, customAuthConfig)
+            .withLifeCycleEvents(MqttLifeCycleEvents())
 
-        client = builder.build()
-        Log.d("IoTManager", "Successfully built MQTT Client!")
-        client.start()
+        try {
+            client = builder.build()
+            Log.d("IoTManager", "Successfully built MQTT Client!")
+            client.start()
+        } catch (e: Exception) {
+            Log.e("IoTManager", "Error building client: ${e.message}")
+        }
     }
 
     fun publishMessage(deviceId: String, jobOrderId: String, location: Location) {

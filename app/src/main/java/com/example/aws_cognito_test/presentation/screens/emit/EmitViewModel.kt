@@ -35,7 +35,8 @@ class EmitViewModel(
     init {
         viewModelScope.launch {
             getTokenUseCase()?.let { token ->
-                iotManager.initMqttClientWithCustom(token)
+                // iotManager.initMqttClientWithCustom(token)
+                iotManager.initMqttClientWithX()
             }
         }
     }
