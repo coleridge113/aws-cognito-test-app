@@ -22,8 +22,14 @@ import software.amazon.awssdk.crt.mqtt5.OnDisconnectionReturn
 import software.amazon.awssdk.crt.mqtt5.OnStoppedReturn
 import software.amazon.awssdk.crt.mqtt5.QOS
 import software.amazon.awssdk.crt.mqtt5.packets.PublishPacket
+import software.amazon.awssdk.crt.mqtt.MqttClientConnection
+import software.amazon.awssdk.crt.mqtt.QualityOfService
 import software.amazon.awssdk.iot.AwsIotMqtt5ClientBuilder
+import software.amazon.awssdk.iot.iotidentity.IotIdentityClient
+import software.amazon.awssdk.iot.iotidentity.model.RegisterThingSubscriptionRequest
+import software.amazon.awssdk.iot.iotidentity.model.RegisterThingRequest
 import java.io.IOException
+import java.lang.StringTemplate
 import kotlin.apply
 
 class IotManager(
@@ -94,6 +100,35 @@ class IotManager(
 
         client = builder.build()
         client.start()
+
+    }
+
+    private suspend fun registerRiderDevice(riderId: String, connection: MqttClientConnection) {
+        val identityClient = IotIdentityClient(connection)
+        identityClient.SubscribeToRegisterThingAccepted(
+            RegisterThingSubscriptionRequest().apply {
+                templateName = "RiderAppTemplate"
+            },
+            QualityOfService.AT_LEAST_ONCE
+        ) { response ->
+            Log.d("IotManager", "Success! Permanent Thing created: ${response.thingName}")
+        }
+
+        identityClient.SubscribeToRegisterThingRejected(
+            RegisterThingSubscriptionRequest().apply {
+                templateName = "RiderAppTemplate"
+            },
+            QualityOfService.AT_LEAST_ONCE
+        ) { error ->
+            Log.d("IotManager", "Failed to register: ${error.errorMessage}")
+        }
+
+        val request = RegisterThingRequest().apply {
+            templateName = "RiderAppTemplate"
+            parameters = hashMapOf("SerialNumber" to riderId)
+        }
+
+        identityClient.PublishRegisterThing(request, QualityOfService.AT_LEAST_ONCE)
     }
 
     fun initMqttClientWithCustom(token: String) {

@@ -10,6 +10,7 @@ import com.example.aws_cognito_test.data.mapper.toModel
 import com.example.aws_cognito_test.data.utils.LocalFileLoader
 import com.example.aws_cognito_test.data.utils.OSLocationManager
 import com.example.aws_cognito_test.domain.repository.LocationRepository
+import com.example.aws_cognito_test.domain.usecase.GetCertificatesUseCase
 import com.example.aws_cognito_test.domain.utils.TrackingManager
 import com.example.aws_cognito_test.domain.utils.IotManager
 import com.example.aws_cognito_test.domain.usecase.GetTokenUseCase
@@ -29,7 +30,8 @@ class EmitViewModel(
     private val trackingManager: TrackingManager,
     private val locationManager: OSLocationManager,
     private val iotManager: IotManager,
-    private val getTokenUseCase: GetTokenUseCase
+    private val getTokenUseCase: GetTokenUseCase,
+    private val getCertificatesUseCase: GetCertificatesUseCase
 ) : ViewModel() {
 
     init {
