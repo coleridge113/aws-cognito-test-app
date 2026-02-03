@@ -2,29 +2,33 @@ package com.example.aws_cognito_test.di
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import org.koin.androidx.viewmodel.dsl.viewModel
-import org.koin.dsl.module
 import androidx.room.Room
-import org.koin.android.ext.koin.androidContext
-import com.example.aws_cognito_test.data.datastore.dataStore
 import com.example.aws_cognito_test.data.database.AppDatabase
 import com.example.aws_cognito_test.data.datastore.AuthLocalDataSource
+import com.example.aws_cognito_test.data.datastore.IotLocalDataSource
+import com.example.aws_cognito_test.data.datastore.dataStore
+import com.example.aws_cognito_test.data.local.AuthRepositoryImpl
+import com.example.aws_cognito_test.data.local.LocationRepositoryImpl
 import com.example.aws_cognito_test.data.remote.api.AuthService
 import com.example.aws_cognito_test.data.remote.source.AuthRemoteDataSource
-import com.example.aws_cognito_test.data.local.LocationRepositoryImpl
-import com.example.aws_cognito_test.data.local.AuthRepositoryImpl
 import com.example.aws_cognito_test.data.utils.LocalFileLoader
 import com.example.aws_cognito_test.data.utils.OSLocationManager
 import com.example.aws_cognito_test.domain.repository.AuthRepository
-import com.example.aws_cognito_test.domain.utils.TrackingManager
-import com.example.aws_cognito_test.domain.utils.IotManager
 import com.example.aws_cognito_test.domain.repository.LocationRepository
+import com.example.aws_cognito_test.domain.usecase.GetCertificatesUseCase
+import com.example.aws_cognito_test.domain.usecase.GetTokenUseCase
+import com.example.aws_cognito_test.domain.utils.IotManager
+import com.example.aws_cognito_test.domain.utils.TrackingManager
 import com.example.aws_cognito_test.presentation.screens.emit.EmitViewModel
 import com.example.aws_cognito_test.presentation.screens.login.LoginViewModel
+import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.viewmodel.dsl.viewModelOf
+import org.koin.core.module.dsl.bind
+import org.koin.core.module.dsl.factoryOf
+import org.koin.core.module.dsl.singleOf
+import org.koin.dsl.module
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import com.example.aws_cognito_test.domain.usecase.GetTokenUseCase
-import com.example.aws_cognito_test.domain.usecase.GetCertificatesUseCase
 
 val appModule = module {
     single {
@@ -46,40 +50,17 @@ val appModule = module {
     single<DataStore<Preferences>> {
         androidContext().dataStore 
     }
-    single {
-        AuthLocalDataSource(get())
-    }
-    single {
-        AuthRemoteDataSource(get())
-    }
-    single<LocationRepository>{
-        LocationRepositoryImpl(get<AppDatabase>().locationDao())
-    }
-    single<AuthRepository>{
-        AuthRepositoryImpl(get(), get())
-    }
-    single {
-        TrackingManager()
-    }
-    single {
-        LocalFileLoader(androidContext())
-    }
-    single {
-        OSLocationManager(androidContext())
-    }
-    single {
-        IotManager(androidContext(), get())
-    }
-    factory {
-        GetCertificatesUseCase(get())
-    }
-    factory {
-        GetTokenUseCase(get())
-    }
-    viewModel {
-        LoginViewModel(get())
-    }
-    viewModel {
-        EmitViewModel(get(), get(), get(), get(), get(), get())
-    }
+    singleOf(::AuthLocalDataSource)
+    singleOf(::AuthRemoteDataSource)
+    singleOf(::IotLocalDataSource)
+    singleOf(::LocationRepositoryImpl) { bind<LocationRepository>() }
+    singleOf(::AuthRepositoryImpl) { bind<AuthRepository>() }
+    singleOf(::TrackingManager)
+    singleOf(::LocalFileLoader)
+    singleOf(::OSLocationManager)
+    singleOf(::IotManager)
+    factoryOf(::GetCertificatesUseCase)
+    factoryOf(::GetTokenUseCase)
+    viewModelOf(::LoginViewModel)
+    viewModelOf(::EmitViewModel)
 }
