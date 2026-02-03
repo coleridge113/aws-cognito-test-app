@@ -24,6 +24,7 @@ import com.example.aws_cognito_test.presentation.screens.login.LoginViewModel
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.example.aws_cognito_test.domain.usecase.GetTokenUseCase
+import com.example.aws_cognito_test.domain.usecase.GetCertificatesUseCase
 
 val appModule = module {
     single {
@@ -67,7 +68,10 @@ val appModule = module {
         OSLocationManager(androidContext())
     }
     single {
-        IotManager(androidContext())
+        IotManager(androidContext(), get())
+    }
+    factory {
+        GetCertificatesUseCase(get())
     }
     factory {
         GetTokenUseCase(get())

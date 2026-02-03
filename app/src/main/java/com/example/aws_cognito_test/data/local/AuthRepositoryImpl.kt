@@ -2,8 +2,10 @@ package com.example.aws_cognito_test.data.local
 
 import com.example.aws_cognito_test.data.remote.source.AuthRemoteDataSource
 import com.example.aws_cognito_test.domain.repository.AuthRepository
+import com.example.aws_cognito_test.domain.model.Certificates
 import com.example.aws_cognito_test.data.datastore.AuthLocalDataSource
 import com.example.aws_cognito_test.data.utils.JwtUtils
+import com.example.aws_cognito_test.data.mapper.toModel
 import android.util.Log
 
 class AuthRepositoryImpl(
@@ -25,5 +27,9 @@ class AuthRepositoryImpl(
         } else {
             stored
         }
+    }
+
+    override suspend fun fetchCertificates(token: String): Certificates {
+        return remote.fetchCertificates(token).toModel()
     }
 }

@@ -5,6 +5,8 @@ import android.util.Log
 import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.core.Amplify
 import com.example.aws_cognito_test.domain.model.Location
+import com.example.aws_cognito_test.domain.model.Certificates
+import com.example.aws_cognito_test.domain.usecase.GetCertificatesUseCase
 import com.example.aws_cognito_test.BuildConfig
 import com.google.gson.Gson
 import software.amazon.awssdk.crt.auth.credentials.CognitoCredentialsProvider
@@ -24,10 +26,12 @@ import software.amazon.awssdk.iot.AwsIotMqtt5ClientBuilder
 import java.io.IOException
 import kotlin.apply
 
-class IotManager(private val context: Context) {
+class IotManager(
+    private val context: Context,
+    private val getCertificatesUseCase: GetCertificatesUseCase
+) {
     private val certificateData = readFile("device.pem.crt")?.trim()
     private val keyData = readFile("private_pkcs8.key")?.trim()
-    private val rootCA = readFile("AmazonRootCA1.pem")?.trim()
 
     private lateinit var client: Mqtt5Client
 
@@ -71,14 +75,16 @@ class IotManager(private val context: Context) {
 
     }
 
-    fun initMqttClientWithX() {
-        val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
-        if (certificateData == null || keyData == null || rootCA == null) {
-            Log.e("IotManager", "Missing required credential files in assets!")
-            return
-        }
+    suspend fun fetchAndInitWithCerts(token: String) {
+        val certificates = getCertificatesUseCase(token) 
+        initMqttClientWithX(certificates)
+    }
 
-        val builder = AwsIotMqtt5ClientBuilder.newDirectMqttBuilderWithMtlsFromMemory(clientEndpoint, certificateData, keyData)
+    private suspend fun initMqttClientWithX(certificates: Certificates) {
+        val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
+        val rootCA = readFile("AmazonRootCA1.pem")?.trim()
+
+        val builder = AwsIotMqtt5ClientBuilder.newDirectMqttBuilderWithMtlsFromMemory(clientEndpoint, certificates.certificatePem, certificates.privateKey)
             .withCertificateAuthority(rootCA)
             .withClientId("Rider-1")
             .withSessionExpiryIntervalSeconds(3600L)
