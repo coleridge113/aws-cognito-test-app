@@ -4,18 +4,23 @@ import android.content.Context
 import android.util.Log
 import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.core.Amplify
-import com.example.aws_cognito_test.domain.model.Location
+import com.example.aws_cognito_test.BuildConfig
 import com.example.aws_cognito_test.domain.model.Certificates
 import com.example.aws_cognito_test.domain.model.IotIdentity
-import com.example.aws_cognito_test.domain.usecase.FetchCertificatesUseCase
+import com.example.aws_cognito_test.domain.model.Location
 import com.example.aws_cognito_test.domain.repository.AuthRepository
-import com.example.aws_cognito_test.BuildConfig
-import com.example.aws_cognito_test.data.datastore.IotLocalDataSource
+import com.example.aws_cognito_test.domain.usecase.FetchCertificatesUseCase
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import software.amazon.awssdk.crt.auth.credentials.CognitoCredentialsProvider
 import software.amazon.awssdk.crt.io.ClientBootstrap
 import software.amazon.awssdk.crt.io.ClientTlsContext
 import software.amazon.awssdk.crt.io.TlsContextOptions
+import software.amazon.awssdk.crt.mqtt.MqttClientConnection
+import software.amazon.awssdk.crt.mqtt.QualityOfService
 import software.amazon.awssdk.crt.mqtt5.Mqtt5Client
 import software.amazon.awssdk.crt.mqtt5.Mqtt5ClientOptions
 import software.amazon.awssdk.crt.mqtt5.OnAttemptingConnectReturn
@@ -25,21 +30,13 @@ import software.amazon.awssdk.crt.mqtt5.OnDisconnectionReturn
 import software.amazon.awssdk.crt.mqtt5.OnStoppedReturn
 import software.amazon.awssdk.crt.mqtt5.QOS
 import software.amazon.awssdk.crt.mqtt5.packets.PublishPacket
-import software.amazon.awssdk.crt.mqtt.MqttClientConnection
-import software.amazon.awssdk.crt.mqtt.QualityOfService
 import software.amazon.awssdk.iot.AwsIotMqtt5ClientBuilder
 import software.amazon.awssdk.iot.iotidentity.IotIdentityClient
-import software.amazon.awssdk.iot.iotidentity.model.RegisterThingSubscriptionRequest
-import software.amazon.awssdk.iot.iotidentity.model.RegisterThingRequest
-import software.amazon.awssdk.iot.iotidentity.model.CreateKeysAndCertificateSubscriptionRequest
 import software.amazon.awssdk.iot.iotidentity.model.CreateKeysAndCertificateRequest
+import software.amazon.awssdk.iot.iotidentity.model.CreateKeysAndCertificateSubscriptionRequest
+import software.amazon.awssdk.iot.iotidentity.model.RegisterThingRequest
+import software.amazon.awssdk.iot.iotidentity.model.RegisterThingSubscriptionRequest
 import java.io.IOException
-import kotlin.apply
-import kotlin.collections.hashMapOf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 const val KEY_ALIAS = "rider-private-key"
 
@@ -149,7 +146,6 @@ class IotManager(
                     }
 
                     identityClient.PublishRegisterThing(registerRequest, QualityOfService.AT_LEAST_ONCE)
-                    // connectWithPermanentIdentity(permanentCert, permanentPrivateKey)
                     Log.d("IotManager", "Register request sent for $riderId")
 
                 } catch (e: Exception) {
@@ -183,9 +179,6 @@ class IotManager(
     }
 
     private suspend fun connectWithPermanentIdentity(certPem: String?, keyPem: String?) {
-        // val identity = repository.fetchIotIdentity()
-        // val thingName = identity?.thingName?.trim()
-
         if (certPem != null && keyPem != null) {
             val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
             val rootCA = readFile("AmazonRootCA1.pem")?.trim()
