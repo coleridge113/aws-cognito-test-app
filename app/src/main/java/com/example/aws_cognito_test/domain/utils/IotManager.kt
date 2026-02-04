@@ -6,8 +6,11 @@ import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.core.Amplify
 import com.example.aws_cognito_test.domain.model.Location
 import com.example.aws_cognito_test.domain.model.Certificates
-import com.example.aws_cognito_test.domain.usecase.GetCertificatesUseCase
+import com.example.aws_cognito_test.domain.model.IotIdentity
+import com.example.aws_cognito_test.domain.usecase.FetchCertificatesUseCase
+import com.example.aws_cognito_test.domain.repository.AuthRepository
 import com.example.aws_cognito_test.BuildConfig
+import com.example.aws_cognito_test.data.datastore.IotLocalDataSource
 import com.google.gson.Gson
 import software.amazon.awssdk.crt.auth.credentials.CognitoCredentialsProvider
 import software.amazon.awssdk.crt.io.ClientBootstrap
@@ -28,18 +31,31 @@ import software.amazon.awssdk.iot.AwsIotMqtt5ClientBuilder
 import software.amazon.awssdk.iot.iotidentity.IotIdentityClient
 import software.amazon.awssdk.iot.iotidentity.model.RegisterThingSubscriptionRequest
 import software.amazon.awssdk.iot.iotidentity.model.RegisterThingRequest
+import software.amazon.awssdk.iot.iotidentity.model.CreateKeysAndCertificateSubscriptionRequest
+import software.amazon.awssdk.iot.iotidentity.model.CreateKeysAndCertificateRequest
 import java.io.IOException
-import java.lang.StringTemplate
 import kotlin.apply
+import kotlin.collections.hashMapOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
+const val KEY_ALIAS = "rider-private-key"
 
 class IotManager(
     private val context: Context,
-    private val getCertificatesUseCase: GetCertificatesUseCase
+    private val fetchCertificatesUseCase: FetchCertificatesUseCase,
+    private val repository: AuthRepository
 ) {
     private val certificateData = readFile("device.pem.crt")?.trim()
     private val keyData = readFile("private_pkcs8.key")?.trim()
+    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private lateinit var client: Mqtt5Client
+    private var client: Mqtt5Client? = null
+
+    private var isTransitioningToPermanent = false
+    private var pendingCredentials: Pair<String, String>? = null
 
     fun fetchAndInitIot() {
         Amplify.Auth.fetchAuthSession(
@@ -77,12 +93,12 @@ class IotManager(
             .withLifeCycleEvents(MqttLifeCycleEvents())
 
         client = builder.build()
-        client.start()
+        client?.start()
 
     }
 
     suspend fun fetchAndInitWithCerts(token: String) {
-        val certificates = getCertificatesUseCase(token) 
+        val certificates = fetchCertificatesUseCase(token)
         initMqttClientWithX(certificates)
     }
 
@@ -98,13 +114,51 @@ class IotManager(
             .withKeepAliveIntervalSeconds(60L)
             .withLifeCycleEvents(MqttLifeCycleEvents())
 
-        client = builder.build()
-        client.start()
+        client = builder.build().apply {
+            start()
 
+            val connection = MqttClientConnection(this, null)
+            providePermanentIdentity("Rider-123", connection)
+        }
     }
 
-    private suspend fun registerRiderDevice(riderId: String, connection: MqttClientConnection) {
+    private suspend fun providePermanentIdentity(riderId: String, connection: MqttClientConnection) {
         val identityClient = IotIdentityClient(connection)
+
+        identityClient.SubscribeToCreateKeysAndCertificateAccepted(
+            CreateKeysAndCertificateSubscriptionRequest(),
+            QualityOfService.AT_LEAST_ONCE
+        ) { keysResponse ->
+            Log.d("IotManager", "Got permanent keys!")
+            val permanentCert = keysResponse.certificatePem
+            val permanentPrivateKey = keysResponse.privateKey
+            val token = keysResponse.certificateOwnershipToken
+
+            ioScope.launch {
+                try {
+                    pendingCredentials = Pair(permanentCert, permanentPrivateKey)
+                    Log.d("IotManager", "Registering credentials: ${permanentCert.takeLast(50)} ${permanentCert.takeLast(50)}")
+
+                    repository.saveIotIdentity(IotIdentity(riderId, permanentCert))
+                    repository.savePrivateKeyToKeystore(KEY_ALIAS, permanentPrivateKey, permanentCert)
+
+                    val registerRequest = RegisterThingRequest().apply {
+                        templateName = "RiderAppTemplate"
+                        certificateOwnershipToken = token
+                        parameters = hashMapOf("SerialNumber" to riderId)
+                    }
+
+                    identityClient.PublishRegisterThing(registerRequest, QualityOfService.AT_LEAST_ONCE)
+                    // connectWithPermanentIdentity(permanentCert, permanentPrivateKey)
+                    Log.d("IotManager", "Register request sent for $riderId")
+
+                } catch (e: Exception) {
+                    Log.e("IotManager", "Failed to save or publish identity: ${e.message}")
+                }
+
+            }
+        }
+
         identityClient.SubscribeToRegisterThingAccepted(
             RegisterThingSubscriptionRequest().apply {
                 templateName = "RiderAppTemplate"
@@ -112,23 +166,44 @@ class IotManager(
             QualityOfService.AT_LEAST_ONCE
         ) { response ->
             Log.d("IotManager", "Success! Permanent Thing created: ${response.thingName}")
+            ioScope.launch {
+                if (pendingCredentials != null) {
+                    isTransitioningToPermanent = true
+                    client?.stop()
+                } else {
+                    Log.e("IotManager", "Registration accepted but keys not stored yet!")
+                }
+            }
         }
 
-        identityClient.SubscribeToRegisterThingRejected(
-            RegisterThingSubscriptionRequest().apply {
-                templateName = "RiderAppTemplate"
-            },
+        identityClient.PublishCreateKeysAndCertificate(
+            CreateKeysAndCertificateRequest(),
             QualityOfService.AT_LEAST_ONCE
-        ) { error ->
-            Log.d("IotManager", "Failed to register: ${error.errorMessage}")
-        }
+        )
+    }
 
-        val request = RegisterThingRequest().apply {
-            templateName = "RiderAppTemplate"
-            parameters = hashMapOf("SerialNumber" to riderId)
-        }
+    private suspend fun connectWithPermanentIdentity(certPem: String?, keyPem: String?) {
+        // val identity = repository.fetchIotIdentity()
+        // val thingName = identity?.thingName?.trim()
 
-        identityClient.PublishRegisterThing(request, QualityOfService.AT_LEAST_ONCE)
+        if (certPem != null && keyPem != null) {
+            val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
+            val rootCA = readFile("AmazonRootCA1.pem")?.trim()
+
+            val builder = AwsIotMqtt5ClientBuilder.newDirectMqttBuilderWithMtlsFromMemory(clientEndpoint, certPem, keyPem)
+                .withCertificateAuthority(rootCA)
+                .withClientId("Rider-1")
+                .withSessionExpiryIntervalSeconds(3600L)
+                .withSessionBehavior(Mqtt5ClientOptions.ClientSessionBehavior.REJOIN_ALWAYS)
+                .withKeepAliveIntervalSeconds(60L)
+                .withLifeCycleEvents(MqttLifeCycleEvents())
+
+            client = builder.build()
+            client?.start()
+
+        } else {
+            Log.e("IotManager", "Missing credentials!")
+        }
     }
 
     fun initMqttClientWithCustom(token: String) {
@@ -143,12 +218,12 @@ class IotManager(
             tokenSignature = null
         }
         val builder = AwsIotMqtt5ClientBuilder.newWebsocketMqttBuilderWithCustomAuth(clientEndpoint, customAuthConfig)
-            .withLifeCycleEvents(MqttLifeCycleEvents())
+        .withLifeCycleEvents(MqttLifeCycleEvents())
 
         try {
             client = builder.build()
             Log.d("IoTManager", "Successfully built MQTT Client!")
-            client.start()
+            client?.start()
         } catch (e: Exception) {
             Log.e("IoTManager", "Error building client: ${e.message}")
         }
@@ -168,7 +243,7 @@ class IotManager(
             .withQOS(QOS.AT_LEAST_ONCE)
             .build()
         
-        client.publish(publishPacket).whenComplete { _, throwable ->
+        client?.publish(publishPacket)?.whenComplete { _, throwable ->
             if (throwable != null) {
                 Log.e("IotManager", "Publish failed: ${throwable.message}")
             } else {
@@ -217,6 +292,15 @@ class IotManager(
             onStoppedReturn: OnStoppedReturn?
         ) {
             Log.d("IotManager", "Stopped!")
+            if (isTransitioningToPermanent) {
+                isTransitioningToPermanent = false
+                val creds = pendingCredentials
+                ioScope.launch {
+                    Log.d("IotManager", "Credentials: $creds")
+                    connectWithPermanentIdentity(creds?.first, creds?.second)
+                    pendingCredentials = null
+                }
+            }
         }
     }
 }

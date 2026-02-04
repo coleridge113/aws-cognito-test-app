@@ -15,7 +15,8 @@ import com.example.aws_cognito_test.data.utils.LocalFileLoader
 import com.example.aws_cognito_test.data.utils.OSLocationManager
 import com.example.aws_cognito_test.domain.repository.AuthRepository
 import com.example.aws_cognito_test.domain.repository.LocationRepository
-import com.example.aws_cognito_test.domain.usecase.GetCertificatesUseCase
+import com.example.aws_cognito_test.domain.usecase.FetchCertificatesUseCase
+import com.example.aws_cognito_test.domain.usecase.GetCertificateKeysUseCase
 import com.example.aws_cognito_test.domain.usecase.GetTokenUseCase
 import com.example.aws_cognito_test.domain.utils.IotManager
 import com.example.aws_cognito_test.domain.utils.TrackingManager
@@ -47,6 +48,7 @@ val appModule = module {
             "location_db"
         ).build()
     }
+    single { get<AppDatabase>().locationDao() }
     single<DataStore<Preferences>> {
         androidContext().dataStore 
     }
@@ -59,7 +61,8 @@ val appModule = module {
     singleOf(::LocalFileLoader)
     singleOf(::OSLocationManager)
     singleOf(::IotManager)
-    factoryOf(::GetCertificatesUseCase)
+    factoryOf(::FetchCertificatesUseCase)
+    factoryOf(::GetCertificateKeysUseCase)
     factoryOf(::GetTokenUseCase)
     viewModelOf(::LoginViewModel)
     viewModelOf(::EmitViewModel)
