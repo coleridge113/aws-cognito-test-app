@@ -95,6 +95,16 @@ class IotManager(
     }
 
     suspend fun fetchAndInitWithCerts(token: String) {
+        val savedIdentity = repository.fetchIotIdentity()
+        val savedPrivateKey = repository.getPrivateKeyFromKeystore(KEY_ALIAS)
+
+        // if (savedIdentity != null && savedPrivateKey != null) {
+        //     Log.d("IotManager", "Found stored credentials")
+        //     connectWithPermanentIdentity(savedIdentity.certPem, savedPrivateKey)
+        // } else {
+        //     val certificates = fetchCertificatesUseCase(token)
+        //     initMqttClientWithX(certificates)
+        // }
         val certificates = fetchCertificatesUseCase(token)
         initMqttClientWithX(certificates)
     }
@@ -156,9 +166,7 @@ class IotManager(
         }
 
         identityClient.SubscribeToRegisterThingAccepted(
-            RegisterThingSubscriptionRequest().apply {
-                templateName = "RiderAppTemplate"
-            },
+            RegisterThingSubscriptionRequest().apply { templateName = "RiderAppTemplate" },
             QualityOfService.AT_LEAST_ONCE
         ) { response ->
             Log.d("IotManager", "Success! Permanent Thing created: ${response.thingName}")
