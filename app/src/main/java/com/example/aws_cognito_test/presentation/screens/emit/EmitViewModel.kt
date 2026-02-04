@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
-import org.koin.androidx.compose.viewModel
 
 class EmitViewModel(
     private val fileLoader: LocalFileLoader,
@@ -39,7 +38,7 @@ class EmitViewModel(
             getTokenUseCase()?.let { token ->
                 // iotManager.initMqttClientWithCustom(token)
                 iotManager.fetchAndInitWithCerts(token)
-          }
+            }
         }
     }
 
@@ -53,21 +52,11 @@ class EmitViewModel(
 
     fun onEvent(event: EmitStateEvents.Event) {
         when (event) {
-            is EmitStateEvents.Event.StartEmit -> { 
-                startEmitting(event.deviceId, event.jobOrderId)
-            }
-            EmitStateEvents.Event.StopEmit -> { stopEmitting() }
-            EmitStateEvents.Event.ToggleCheckbox -> { toggleCheckbox() }
-            is EmitStateEvents.Event.SendUpdates -> { sendUpdates(
-                event.deviceId,
-                event.jobOrderId
-            ) }
-            is EmitStateEvents.Event.EvaluateGeo -> {
-                evaluateGeo(
-                    event.deviceId,
-                    event.jobOrderId
-                )
-            }
+            EmitStateEvents.Event.StopEmit -> stopEmitting() 
+            EmitStateEvents.Event.ToggleCheckbox -> toggleCheckbox()
+            is EmitStateEvents.Event.StartEmit -> startEmitting(event.deviceId, event.jobOrderId)
+            is EmitStateEvents.Event.SendUpdates -> sendUpdates(event.deviceId, event.jobOrderId)
+            is EmitStateEvents.Event.EvaluateGeo -> evaluateGeo(event.deviceId, event.jobOrderId)
         }
     }
 
