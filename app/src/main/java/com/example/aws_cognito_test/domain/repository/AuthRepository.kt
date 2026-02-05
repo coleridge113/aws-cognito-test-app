@@ -12,11 +12,13 @@ interface AuthRepository {
     
     suspend fun fetchCertificates(token: String): Certificates
 
-    suspend fun saveIotIdentity(identity: IotIdentity)
+    suspend fun saveIotIdentity(identity: IotIdentity, privateKeyPem: String)
 
     suspend fun fetchIotIdentity(): IotIdentity?
 
     suspend fun savePrivateKeyToKeystore(alias: String, privateKeyPem: String, certPem: String)
 
     suspend fun getPrivateKeyFromKeystore(alias: String): PrivateKey?
+
+    suspend fun clearIdentityAndKeys()
 }

@@ -6,33 +6,17 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.PrivateKey
 import android.util.Base64
 import android.util.Log
+import java.security.cert.CertificateFactory
 
 object KeyStoreUtils {
     fun savePrivateKeyToKeystore(alias: String, privateKeyPem: String, certPem: String) {
         Log.d("IotManager", privateKeyPem)
         val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 
-        // 1. Identify if it is PKCS#1 (RSA PRIVATE KEY) or PKCS#8 (PRIVATE KEY)
-        val isPkcs1 = privateKeyPem.contains("BEGIN RSA PRIVATE KEY")
-
-        val cleanKey = privateKeyPem
-            .replace("-----BEGIN RSA PRIVATE KEY-----", "")
-            .replace("-----END RSA PRIVATE KEY-----", "")
-            .replace("-----BEGIN PRIVATE KEY-----", "")
-            .replace("-----END PRIVATE KEY-----", "")
-            .replace("\\s".toRegex(), "")
-
-        val keyBytes = Base64.decode(cleanKey, Base64.DEFAULT)
-
-        val privateKey = if (isPkcs1) {
-            val keySpec = PKCS8EncodedKeySpec(keyBytes) 
-            KeyFactory.getInstance("RSA").generatePrivate(keySpec)
-        } else {
-            KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(keyBytes))
-        }
+        val privateKey = parsePrivateKey(privateKeyPem)
 
         // 2. Clean and Generate the Certificate
-        val cf = java.security.cert.CertificateFactory.getInstance("X.509")
+        val cf = CertificateFactory.getInstance("X.509")
         val certStream = certPem.byteInputStream()
         val certificate = cf.generateCertificate(certStream)
 
@@ -48,11 +32,32 @@ object KeyStoreUtils {
         // and the fourth is the chain (cannot be null)
         keyStore.setKeyEntry(alias, privateKey, null, chain)
 
-        Log.d("KeyStoreHelper", "Key and Cert successfully linked in KeyStore")
+        val storedCert = keyStore.getCertificate(alias)
+        Log.d("IotManager", "Verification - Alias exists: ${keyStore.containsAlias(alias)}")
+        Log.d("IotManager", "Verification - Cert in Keystore: ${storedCert != null}")
+
     }
 
     fun getPrivateKeyFromKeystore(alias: String): PrivateKey? {
         val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        return keyStore.getKey(alias, null) as? java.security.PrivateKey
+        return keyStore.getKey(alias, null) as? PrivateKey
+    }
+
+    private fun parsePrivateKey(privateKeyPem: String): PrivateKey {
+        val cleanKey = privateKeyPem
+            .replace("-----BEGIN RSA PRIVATE KEY-----", "")
+            .replace("-----END RSA PRIVATE KEY-----", "")
+            .replace("-----BEGIN PRIVATE KEY-----", "")
+            .replace("-----END PRIVATE KEY-----", "")
+            .replace("\\s".toRegex(), "")
+
+        val keyBytes = Base64.decode(cleanKey, Base64.DEFAULT)
+        val keySpec = PKCS8EncodedKeySpec(keyBytes) 
+
+        return try {
+            KeyFactory.getInstance("RSA").generatePrivate(keySpec)
+        } catch (_: Exception) {
+            KeyFactory.getInstance("EC").generatePrivate(keySpec)
+        }
     }
 }

@@ -168,4 +168,7 @@ dependencies {
 
     // JWT
     implementation("com.auth0.android:jwtdecode:2.0.2")
+
+    // Encrypted Shared Preferences
+    implementation("androidx.security:security-crypto:1.1.0")
 }

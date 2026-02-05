@@ -39,8 +39,8 @@ class AuthRepositoryImpl(
         return remote.fetchCertificates(token).toModel()
     }
 
-    override suspend fun saveIotIdentity(identity: IotIdentity) {
-        iotLocal.saveIotIdentity(identity.toDto())
+    override suspend fun saveIotIdentity(identity: IotIdentity, privateKeyPem: String) {
+        iotLocal.saveIotIdentity(identity.toDto(), privateKeyPem)
     }
 
     override suspend fun fetchIotIdentity(): IotIdentity? {
@@ -53,5 +53,9 @@ class AuthRepositoryImpl(
 
     override suspend fun getPrivateKeyFromKeystore(alias: String): PrivateKey? {
         return KeyStoreUtils.getPrivateKeyFromKeystore(alias)
+    }
+
+    override suspend fun clearIdentityAndKeys() {
+        iotLocal.clearIotIdentity()
     }
 }

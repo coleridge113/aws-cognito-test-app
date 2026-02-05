@@ -1,10 +1,12 @@
 package com.example.aws_cognito_test.domain.utils
 
 import android.content.Context
+import android.util.Base64
 import android.util.Log
 import com.amplifyframework.auth.cognito.AWSCognitoAuthSession
 import com.amplifyframework.core.Amplify
 import com.example.aws_cognito_test.BuildConfig
+import com.example.aws_cognito_test.data.utils.CryptoUtils
 import com.example.aws_cognito_test.domain.model.Certificates
 import com.example.aws_cognito_test.domain.model.IotIdentity
 import com.example.aws_cognito_test.domain.model.Location
@@ -37,6 +39,7 @@ import software.amazon.awssdk.iot.iotidentity.model.CreateKeysAndCertificateSubs
 import software.amazon.awssdk.iot.iotidentity.model.RegisterThingRequest
 import software.amazon.awssdk.iot.iotidentity.model.RegisterThingSubscriptionRequest
 import java.io.IOException
+import java.security.KeyStore
 
 const val KEY_ALIAS = "rider-private-key"
 
@@ -50,9 +53,10 @@ class IotManager(
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private var client: Mqtt5Client? = null
+    private var iotIdentity: IotIdentity? = null
+    private var jwt: String? = null
 
     private var isTransitioningToPermanent = false
-    private var pendingCredentials: Pair<String, String>? = null
 
     fun fetchAndInitIot() {
         Amplify.Auth.fetchAuthSession(
@@ -87,7 +91,7 @@ class IotManager(
         websocketConfig.credentialsProvider = cognitoBuilder.build()
         
         val builder = AwsIotMqtt5ClientBuilder.newWebsocketMqttBuilderWithSigv4Auth(clientEndpoint, websocketConfig)
-            .withLifeCycleEvents(MqttLifeCycleEvents())
+            .withLifeCycleEvents(MqttLifeCycleEvents {})
 
         client = builder.build()
         client?.start()
@@ -96,20 +100,18 @@ class IotManager(
 
     suspend fun fetchAndInitWithCerts(token: String) {
         val savedIdentity = repository.fetchIotIdentity()
-        val savedPrivateKey = repository.getPrivateKeyFromKeystore(KEY_ALIAS)
+        jwt = token
 
-        // if (savedIdentity != null && savedPrivateKey != null) {
-        //     Log.d("IotManager", "Found stored credentials")
-        //     connectWithPermanentIdentity(savedIdentity.certPem, savedPrivateKey)
-        // } else {
-        //     val certificates = fetchCertificatesUseCase(token)
-        //     initMqttClientWithX(certificates)
-        // }
-        val certificates = fetchCertificatesUseCase(token)
-        initMqttClientWithX(certificates)
+        if (savedIdentity != null) {
+            Log.d("IotManager", "Found stored credentials")
+            connectWithPermanentIdentity(token)
+        } else {
+            initMqttClientWithX(token)
+        }
     }
 
-    private suspend fun initMqttClientWithX(certificates: Certificates) {
+    private suspend fun initMqttClientWithX(token: String) {
+        val certificates = fetchCertificatesUseCase(token)
         val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
         val rootCA = readFile("AmazonRootCA1.pem")?.trim()
 
@@ -119,13 +121,18 @@ class IotManager(
             .withSessionExpiryIntervalSeconds(3600L)
             .withSessionBehavior(Mqtt5ClientOptions.ClientSessionBehavior.REJOIN_ALWAYS)
             .withKeepAliveIntervalSeconds(60L)
-            .withLifeCycleEvents(MqttLifeCycleEvents())
+            .withLifeCycleEvents(MqttLifeCycleEvents {
+                ioScope.launch {
+                    repository.clearIdentityAndKeys()
+                    fetchAndInitWithCerts(token)
+                }
+            })
 
         client = builder.build().apply {
             start()
 
             val connection = MqttClientConnection(this, null)
-            providePermanentIdentity("Rider-123", connection)
+            providePermanentIdentity("Rider-123", connection) // profile.name
         }
     }
 
@@ -137,16 +144,20 @@ class IotManager(
             QualityOfService.AT_LEAST_ONCE
         ) { keysResponse ->
             Log.d("IotManager", "Got permanent keys!")
-            val permanentCert = keysResponse.certificatePem
-            val permanentPrivateKey = keysResponse.privateKey
+            val permanentCert = keysResponse.certificatePem // permanent device cert
+            val permanentPrivateKey = keysResponse.privateKey // permanent private key
             val token = keysResponse.certificateOwnershipToken
 
             ioScope.launch {
                 try {
-                    pendingCredentials = Pair(permanentCert, permanentPrivateKey)
-                    Log.d("IotManager", "Registering credentials: ${permanentCert.takeLast(50)} ${permanentCert.takeLast(50)}")
+                    iotIdentity = IotIdentity(
+                        riderId, 
+                        permanentCert,
+                        null,
+                        null
+                    )
 
-                    repository.saveIotIdentity(IotIdentity(riderId, permanentCert))
+                    repository.saveIotIdentity(iotIdentity!!, permanentPrivateKey)
                     repository.savePrivateKeyToKeystore(KEY_ALIAS, permanentPrivateKey, permanentCert)
 
                     val registerRequest = RegisterThingRequest().apply {
@@ -171,7 +182,7 @@ class IotManager(
         ) { response ->
             Log.d("IotManager", "Success! Permanent Thing created: ${response.thingName}")
             ioScope.launch {
-                if (pendingCredentials != null) {
+                if (iotIdentity?.certPem != null) {
                     isTransitioningToPermanent = true
                     client?.stop()
                 } else {
@@ -186,24 +197,42 @@ class IotManager(
         )
     }
 
-    private suspend fun connectWithPermanentIdentity(certPem: String?, keyPem: String?) {
-        if (certPem != null && keyPem != null) {
-            val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
-            val rootCA = readFile("AmazonRootCA1.pem")?.trim()
+    private suspend fun connectWithPermanentIdentity(token: String) {
+        val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
+        val identity = repository.fetchIotIdentity()
 
-            val builder = AwsIotMqtt5ClientBuilder.newDirectMqttBuilderWithMtlsFromMemory(clientEndpoint, certPem, keyPem)
-                .withCertificateAuthority(rootCA)
-                .withClientId("Rider-1")
-                .withSessionExpiryIntervalSeconds(3600L)
-                .withSessionBehavior(Mqtt5ClientOptions.ClientSessionBehavior.REJOIN_ALWAYS)
-                .withKeepAliveIntervalSeconds(60L)
-                .withLifeCycleEvents(MqttLifeCycleEvents())
+        if (identity?.iv != null && identity.encryptedKey != null) {
+            val privateKeyPem = CryptoUtils.decrypt(
+                iv = Base64.decode(identity.iv, Base64.DEFAULT),
+                encryptedData = Base64.decode(identity.encryptedKey, Base64.DEFAULT),
+            )
 
-            client = builder.build()
-            client?.start()
+            try {
+                val builder = AwsIotMqtt5ClientBuilder.newDirectMqttBuilderWithMtlsFromMemory(
+                    clientEndpoint,
+                    identity.certPem,
+                    privateKeyPem
+                )
 
+                builder.withClientId(identity.thingName)
+                    .withSessionExpiryIntervalSeconds(3600L)
+                    .withSessionBehavior(Mqtt5ClientOptions.ClientSessionBehavior.REJOIN_ALWAYS)
+                    .withKeepAliveIntervalSeconds(60L)
+                    .withLifeCycleEvents(MqttLifeCycleEvents {
+                        ioScope.launch {
+                            client?.stop()
+                            repository.clearIdentityAndKeys()
+                            fetchAndInitWithCerts(token)
+                        }
+                    })
+
+                client = builder.build()
+                client?.start()
+            } catch(e: Exception) {
+                Log.e("IotManager", "Failed to connect permanent: ${e.message}")
+            }
         } else {
-            Log.e("IotManager", "Missing credentials!")
+            Log.e("IotManager", "No IV and EncryptedKey")
         }
     }
 
@@ -219,7 +248,7 @@ class IotManager(
             tokenSignature = null
         }
         val builder = AwsIotMqtt5ClientBuilder.newWebsocketMqttBuilderWithCustomAuth(clientEndpoint, customAuthConfig)
-        .withLifeCycleEvents(MqttLifeCycleEvents())
+        .withLifeCycleEvents(MqttLifeCycleEvents {})
 
         try {
             client = builder.build()
@@ -262,7 +291,9 @@ class IotManager(
         }
     }
 
-    inner class MqttLifeCycleEvents: Mqtt5ClientOptions.LifecycleEvents {
+    inner class MqttLifeCycleEvents(
+        private val onAuthError: () -> Unit
+    ): Mqtt5ClientOptions.LifecycleEvents {
         override fun onAttemptingConnect(
             client: Mqtt5Client?,
             onAttemptingConnectReturn: OnAttemptingConnectReturn?
@@ -279,6 +310,10 @@ class IotManager(
             onConnectionFailureReturn: OnConnectionFailureReturn?
         ) {
             Log.d("IotManager", "Connection failed: ${onConnectionFailureReturn?.errorCode}")
+            if (onConnectionFailureReturn?.errorCode == 5134) {
+                Log.d("IotManager", "Calling onAuthError")
+                onAuthError()
+            }
         }
 
         override fun onDisconnection(
@@ -293,13 +328,14 @@ class IotManager(
             onStoppedReturn: OnStoppedReturn?
         ) {
             Log.d("IotManager", "Stopped!")
-            if (isTransitioningToPermanent) {
-                isTransitioningToPermanent = false
-                val creds = pendingCredentials
-                ioScope.launch {
-                    Log.d("IotManager", "Credentials: $creds")
-                    connectWithPermanentIdentity(creds?.first, creds?.second)
-                    pendingCredentials = null
+            ioScope.launch {
+                if (isTransitioningToPermanent) {
+                    isTransitioningToPermanent = false
+                    jwt?.let {
+                        connectWithPermanentIdentity(it)
+                    }
+                } else {
+                    Log.e("IotManager", "Failed to fetch device certificate!")
                 }
             }
         }
