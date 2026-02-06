@@ -35,8 +35,8 @@ class AuthRepositoryImpl(
         }
     }
 
-    override suspend fun fetchCertificates(token: String): Certificates {
-        return remote.fetchCertificates(token).toModel()
+    override suspend fun fetchCertificates(riderId: String, token: String): Certificates {
+        return remote.fetchCertificates(riderId, token).toModel()
     }
 
     override suspend fun saveIotIdentity(identity: IotIdentity, privateKeyPem: String) {

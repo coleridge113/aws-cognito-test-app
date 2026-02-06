@@ -10,7 +10,7 @@ interface AuthRepository {
 
     suspend fun fetchJwtToken(): String?
     
-    suspend fun fetchCertificates(token: String): Certificates
+    suspend fun fetchCertificates(riderId: String, token: String): Certificates
 
     suspend fun saveIotIdentity(identity: IotIdentity, privateKeyPem: String)
 

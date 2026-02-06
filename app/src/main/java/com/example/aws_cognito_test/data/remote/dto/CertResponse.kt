@@ -7,4 +7,7 @@ data class CertResponse(
     val riderId: String
 )
 
-data class TokenRequest(val token: String)
+data class TokenRequest(
+    val riderId: String,
+    val token: String
+)

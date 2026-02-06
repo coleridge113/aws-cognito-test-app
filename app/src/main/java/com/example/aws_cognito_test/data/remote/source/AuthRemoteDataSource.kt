@@ -13,7 +13,7 @@ class AuthRemoteDataSource(
         return api.fetchToken()
     }
 
-    suspend fun fetchCertificates(token: String): CertResponse {
-        return api.fetchCertificates(TokenRequest(token))
+    suspend fun fetchCertificates(riderId: String, token: String): CertResponse {
+        return api.fetchCertificates(TokenRequest(riderId, token))
     }
 }
