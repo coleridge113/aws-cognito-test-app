@@ -58,14 +58,14 @@ class IotManager(
 
     private var isTransitioningToPermanent = false
 
-    fun fetchAndInitIot() {
+    fun fetchAndInitIot(token: String) {
         Amplify.Auth.fetchAuthSession(
             { result ->
                 val cognitoSession = result as AWSCognitoAuthSession
                 val identityId = cognitoSession.identityIdResult.value
 
                 if (identityId != null) {
-                    initMqttClientWithCognito(identityId)
+                    initMqttClientWithCustom(token) 
                 } else {
                     Log.e("IotManager", "User is not signed in!")
                 }
@@ -98,6 +98,12 @@ class IotManager(
 
     }
 
+    private suspend fun forceCrash(): Throwable {
+        Log.d("IotManager", "Forcing crash...")
+        repository.clearIdentityAndKeys()
+        throw RuntimeException()
+    }
+
     suspend fun fetchAndInitWithCerts(token: String) {
         val savedIdentity = repository.fetchIotIdentity()
         jwt = token
@@ -106,18 +112,18 @@ class IotManager(
             Log.d("IotManager", "Found stored credentials")
             connectWithPermanentIdentity(token)
         } else {
-            initMqttClientWithX(token)
+            initMqttClientWithX("Rider-123", token)
         }
     }
 
-    private suspend fun initMqttClientWithX(token: String) {
-        val certificates = fetchCertificatesUseCase(token)
+    private suspend fun initMqttClientWithX(riderId: String, token: String) {
+        val certificates = fetchCertificatesUseCase(riderId, token) // get temporary certificates
         val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
         val rootCA = readFile("AmazonRootCA1.pem")?.trim()
 
         val builder = AwsIotMqtt5ClientBuilder.newDirectMqttBuilderWithMtlsFromMemory(clientEndpoint, certificates.certificatePem, certificates.privateKey)
             .withCertificateAuthority(rootCA)
-            .withClientId("Rider-1")
+            .withClientId(riderId)
             .withSessionExpiryIntervalSeconds(3600L)
             .withSessionBehavior(Mqtt5ClientOptions.ClientSessionBehavior.REJOIN_ALWAYS)
             .withKeepAliveIntervalSeconds(60L)
@@ -132,18 +138,19 @@ class IotManager(
             start()
 
             val connection = MqttClientConnection(this, null)
-            providePermanentIdentity("Rider-123", connection) // profile.name
+            providePermanentIdentity(riderId, connection) // profile.name
         }
     }
 
     private suspend fun providePermanentIdentity(riderId: String, connection: MqttClientConnection) {
+        Log.d("IotManager", "Providing permanent credentials...")
         val identityClient = IotIdentityClient(connection)
 
         identityClient.SubscribeToCreateKeysAndCertificateAccepted(
-            CreateKeysAndCertificateSubscriptionRequest(),
+            CreateKeysAndCertificateSubscriptionRequest(), // Request to get permanent credentials
             QualityOfService.AT_LEAST_ONCE
         ) { keysResponse ->
-            Log.d("IotManager", "Got permanent keys!")
+            Log.d("IotManager", "Received permanent credentials!")
             val permanentCert = keysResponse.certificatePem // permanent device cert
             val permanentPrivateKey = keysResponse.privateKey // permanent private key
             val token = keysResponse.certificateOwnershipToken
@@ -198,6 +205,7 @@ class IotManager(
     }
 
     private suspend fun connectWithPermanentIdentity(token: String) {
+        Log.d("IotManager", "Connecting with permanent credentials...")
         val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
         val identity = repository.fetchIotIdentity()
 
@@ -228,6 +236,7 @@ class IotManager(
 
                 client = builder.build()
                 client?.start()
+                Log.d("IotManager", "Successfully connected with permanent credentials!")
             } catch(e: Exception) {
                 Log.e("IotManager", "Failed to connect permanent: ${e.message}")
             }
@@ -330,7 +339,6 @@ class IotManager(
             Log.d("IotManager", "Stopped!")
             ioScope.launch {
                 if (isTransitioningToPermanent) {
-                    isTransitioningToPermanent = false
                     jwt?.let {
                         connectWithPermanentIdentity(it)
                     }

@@ -36,7 +36,8 @@ class EmitViewModel(
     init {
         viewModelScope.launch {
             getTokenUseCase()?.let { token ->
-                iotManager.fetchAndInitWithCerts(token)
+                // iotManager.fetchAndInitWithCerts(token)
+                iotManager.fetchAndInitIot(token)
             }
         }
     }
