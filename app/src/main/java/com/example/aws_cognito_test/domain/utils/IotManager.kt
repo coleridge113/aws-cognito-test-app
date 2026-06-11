@@ -48,8 +48,6 @@ class IotManager(
     private val fetchCertificatesUseCase: FetchCertificatesUseCase,
     private val repository: AuthRepository
 ) {
-    private val certificateData = readFile("device.pem.crt")?.trim()
-    private val keyData = readFile("private_pkcs8.key")?.trim()
     private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private var client: Mqtt5Client? = null
@@ -75,7 +73,54 @@ class IotManager(
             }
         )
     }
-    
+
+    fun initMqttClientWithCustom(token: String) {
+        Log.d("IoTManager", "Token: $token")
+        val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
+        val customAuthConfig = AwsIotMqtt5ClientBuilder.MqttConnectCustomAuthConfig().apply {
+            authorizerName = "CustomAuthorizer"
+            password = token.toByteArray(Charsets.UTF_8)
+            username = "guest"
+            tokenKeyName = null
+            tokenValue = null
+            tokenSignature = null
+        }
+        val builder = AwsIotMqtt5ClientBuilder.newWebsocketMqttBuilderWithCustomAuth(clientEndpoint, customAuthConfig)
+            .withLifeCycleEvents(MqttLifeCycleEvents {})
+
+        try {
+            client = builder.build()
+            Log.d("IoTManager", "Successfully built MQTT Client!")
+            client?.start()
+        } catch (e: Exception) {
+            Log.e("IoTManager", "Error building client: ${e.message}")
+        }
+    }
+
+    fun publishMessage(deviceId: String, jobOrderId: String, location: Location) {
+        val topic = "tracker/$deviceId/update"
+        val jsonTree = Gson().toJsonTree(location, Location::class.java)
+        val jsonObject = jsonTree.asJsonObject
+        jsonObject.addProperty("deviceId", deviceId)
+        jsonObject.addProperty("jobOrderId", jobOrderId)
+        val jsonPayload = jsonObject.toString()
+
+        val publishPacket = PublishPacket.PublishPacketBuilder()
+            .withTopic(topic)
+            .withPayload(jsonPayload.toByteArray())
+            .withQOS(QOS.AT_LEAST_ONCE)
+            .build()
+
+        client?.publish(publishPacket)?.whenComplete { _, throwable ->
+            if (throwable != null) {
+                Log.e("IotManager", "Publish failed: ${throwable.message}")
+            } else {
+                Log.d("IotManager", "Published $location\nto $topic")
+            }
+        }
+    }
+
+
     private fun initMqttClientWithCognito(identityId: String) {
         val clientEndpoint = "cognito-identity.ap-southeast-1.amazonaws.com"
         val websocketConfig = AwsIotMqtt5ClientBuilder.WebsocketSigv4Config()
@@ -242,52 +287,6 @@ class IotManager(
             }
         } else {
             Log.e("IotManager", "No IV and EncryptedKey")
-        }
-    }
-
-    fun initMqttClientWithCustom(token: String) {
-        Log.d("IoTManager", "Token: $token")
-        val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
-        val customAuthConfig = AwsIotMqtt5ClientBuilder.MqttConnectCustomAuthConfig().apply {
-            authorizerName = "CustomAuthorizer"
-            password = token.toByteArray(Charsets.UTF_8)
-            username = "guest"
-            tokenKeyName = null
-            tokenValue = null
-            tokenSignature = null
-        }
-        val builder = AwsIotMqtt5ClientBuilder.newWebsocketMqttBuilderWithCustomAuth(clientEndpoint, customAuthConfig)
-        .withLifeCycleEvents(MqttLifeCycleEvents {})
-
-        try {
-            client = builder.build()
-            Log.d("IoTManager", "Successfully built MQTT Client!")
-            client?.start()
-        } catch (e: Exception) {
-            Log.e("IoTManager", "Error building client: ${e.message}")
-        }
-    }
-
-    fun publishMessage(deviceId: String, jobOrderId: String, location: Location) {
-        val topic = "tracker/$deviceId/update"
-        val jsonTree = Gson().toJsonTree(location, Location::class.java)
-        val jsonObject = jsonTree.asJsonObject
-        jsonObject.addProperty("deviceId", deviceId)
-        jsonObject.addProperty("jobOrderId", jobOrderId)
-        val jsonPayload = jsonObject.toString()
-
-        val publishPacket = PublishPacket.PublishPacketBuilder()
-            .withTopic(topic)
-            .withPayload(jsonPayload.toByteArray())
-            .withQOS(QOS.AT_LEAST_ONCE)
-            .build()
-        
-        client?.publish(publishPacket)?.whenComplete { _, throwable ->
-            if (throwable != null) {
-                Log.e("IotManager", "Publish failed: ${throwable.message}")
-            } else {
-                Log.d("IotManager", "Published $location\nto $topic")
-            }
         }
     }
 
