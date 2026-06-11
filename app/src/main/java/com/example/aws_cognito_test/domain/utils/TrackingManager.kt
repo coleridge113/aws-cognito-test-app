@@ -16,6 +16,7 @@ import com.example.aws_cognito_test.domain.model.Location
 const val TAG = "TrackingManager"
 
 class TrackingManager {
+    // Must match actual AWS resource names
     private val trackerResource = "MetromartDemoTracker"
     private val geofenceCollection = "MetromartDemoGeofenceCollection"
 
@@ -24,7 +25,12 @@ class TrackingManager {
     }
     private val client: LocationClient by lazy { geoPlugin.escapeHatch }
 
-    suspend fun updateLocationLive(deviceId: String, jobOrderId: String, location: Location) {
+    // Single location update
+    suspend fun updateLocationLive(
+        deviceId: String, // DeviceID to identify where the update came from
+        jobOrderId: String,
+        location: Location
+    ) {
         val lat = location.latitude
         val lng = location.longitude
         val properties = mapOf(
@@ -48,24 +54,30 @@ class TrackingManager {
         Log.d(TAG, "Successfully sent location: $location")
     }
 
+	// Multi-location update
     suspend fun batchUpdateLocation(
-        id: String, 
+        deviceId: String, // DeviceID to identify where the update came from
         jobOrderId: String,
         locations: List<Location>
     ) {
+        // list is "chunked" into groups of 10
+        // since API call is limited to 10 position updates per request
         val chunks = locations.chunked(10)
         val properties = mapOf(Pair("jobOrderId", jobOrderId))
 
+		// loop through chunks
         for(chunk in chunks) {
+            // this structure must be followed
             val updates = chunk.map { loc ->
                 DevicePositionUpdate {
-                    deviceId = id
+                    this.deviceId = deviceId
                     position = listOf(loc.longitude, loc.latitude)
                     sampleTime = convertTimestampToInstant(loc.timestamp)
                     positionProperties = properties
                 }
             }
             try {
+                // api call structure
                 client.batchUpdateDevicePosition {
                     trackerName = trackerResource
                     this.updates = updates
