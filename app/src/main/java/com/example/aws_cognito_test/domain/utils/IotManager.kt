@@ -78,7 +78,7 @@ class IotManager(
         Log.d("IoTManager", "Token: $token")
         val clientEndpoint = BuildConfig.AWS_IOT_ENDPOINT
         val customAuthConfig = AwsIotMqtt5ClientBuilder.MqttConnectCustomAuthConfig().apply {
-            authorizerName = "CustomAuthorizer"
+            authorizerName = "MetroMartAuthorizer"
             password = token.toByteArray(Charsets.UTF_8)
             username = "guest"
             tokenKeyName = null
@@ -115,6 +115,7 @@ class IotManager(
             if (throwable != null) {
                 Log.e("IotManager", "Publish failed: ${throwable.message}")
             } else {
+                Log.d("IotManager", "$deviceId : $jobOrderId")
                 Log.d("IotManager", "Published $location\nto $topic")
             }
         }
